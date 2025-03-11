@@ -23,10 +23,32 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$USER_HOME$/python_demo/Secure-DNN-Inference-with-Adversarial-training" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.Lenet5ModelConstruction">
+    <configuration name="Lenet5ModelConstruction" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Results_Verification_PPML" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pre-trained-model" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pre-trained-model/Lenet5ModelConstruction.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="add_method" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Results_Verification_PPML" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -49,8 +71,32 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="he_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Results_Verification_PPML" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/he_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.Lenet5ModelConstruction" />
+        <item itemvalue="Python.he_test" />
         <item itemvalue="Python.add_method" />
       </list>
     </recent_temporary>
@@ -69,7 +115,7 @@
       <workItem from="1741589489435" duration="1599000" />
       <workItem from="1741591093706" duration="3554000" />
       <workItem from="1741657072151" duration="4631000" />
-      <workItem from="1741694108972" duration="4399000" />
+      <workItem from="1741694108972" duration="8031000" />
     </task>
     <servers />
   </component>
@@ -77,26 +123,34 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
+    <state x="2983" y="454" width="424" height="491" key="FileChooserDialogImpl" timestamp="1741699731799">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state x="2983" y="454" width="424" height="491" key="FileChooserDialogImpl/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741699731799" />
     <state x="2992" y="580" width="712" height="506" key="Github.ShareDialog" timestamp="1741585522971">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state x="2992" y="580" width="712" height="506" key="Github.ShareDialog/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741585522971" />
-    <state width="2506" height="384" key="GridCell.Tab.0.bottom" timestamp="1741697485132">
+    <state width="2506" height="383" key="GridCell.Tab.0.bottom" timestamp="1741702191167">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="384" key="GridCell.Tab.0.bottom/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741697485132" />
-    <state width="2506" height="384" key="GridCell.Tab.0.center" timestamp="1741697485132">
+    <state width="1866" height="265" key="GridCell.Tab.0.bottom/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
+    <state width="2506" height="383" key="GridCell.Tab.0.bottom/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741702191167" />
+    <state width="2506" height="383" key="GridCell.Tab.0.center" timestamp="1741702191167">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="384" key="GridCell.Tab.0.center/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741697485132" />
-    <state width="2506" height="384" key="GridCell.Tab.0.left" timestamp="1741697485132">
+    <state width="1866" height="265" key="GridCell.Tab.0.center/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
+    <state width="2506" height="383" key="GridCell.Tab.0.center/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741702191167" />
+    <state width="2506" height="383" key="GridCell.Tab.0.left" timestamp="1741702191167">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="384" key="GridCell.Tab.0.left/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741697485132" />
-    <state width="2506" height="384" key="GridCell.Tab.0.right" timestamp="1741697485132">
+    <state width="1866" height="265" key="GridCell.Tab.0.left/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
+    <state width="2506" height="383" key="GridCell.Tab.0.left/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741702191167" />
+    <state width="2506" height="383" key="GridCell.Tab.0.right" timestamp="1741702191167">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="384" key="GridCell.Tab.0.right/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741697485132" />
+    <state width="1866" height="265" key="GridCell.Tab.0.right/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
+    <state width="2506" height="383" key="GridCell.Tab.0.right/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741702191167" />
     <state x="2681" y="331" width="1037" height="737" key="SettingsEditor" timestamp="1741589118710">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
@@ -108,5 +162,7 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$add_method.coverage" NAME="add_method Coverage Results" MODIFIED="1741697395074" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$Lenet5ModelConstruction.coverage" NAME="Lenet5ModelConstruction Coverage Results" MODIFIED="1741702191163" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$he_test.coverage" NAME="he_test Coverage Results" MODIFIED="1741699044086" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
   </component>
 </project>

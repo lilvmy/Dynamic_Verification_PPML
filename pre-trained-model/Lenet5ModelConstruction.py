@@ -15,7 +15,7 @@ def setup_logging():
     """
     root_logger = log.getLogger()
     root_logger.setLevel(log.INFO)
-    handler = log.FileHandler("lenet5_model_for_mnist.log", "w", "utf-8")
+    handler = log.FileHandler("log/lenet5_model_for_mnist.log", "w", "utf-8")
     handler.setFormatter(log.Formatter(fmt="%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s",
                                        datefmt="%Y-%m-%d %H:%M:%S"))
     root_logger.addHandler(handler)
@@ -162,7 +162,7 @@ def main():
     log.info(f"The accuracy of real number model is {acc}")
 
     print("\nSave Model...")
-    torch.save(model.state_dict(), "lenet5_model.pt")
+    torch.save(model.state_dict(), "./model/lenet5_model.pt")
 
 if __name__ == "__main__":
     setup_logging()

@@ -1,9 +1,12 @@
 import numpy as np
 from Pyfhel import Pyfhel
+import tenseal as ts
 
 import tempfile
 
 tmp_dir = tempfile.TemporaryDirectory()
+
+
 
 
 class HE:
@@ -19,10 +22,15 @@ class HE:
     def get_relin_key(self):
         pass
 
+    def get_secret_key(self):
+        pass
+
     def load_public_key(self, key):
         pass
 
     def load_relin_key(self, key):
+        pass
+    def load_secret_key(self, key):
         pass
 
     def encode_matrix(self, matrix):
@@ -52,9 +60,6 @@ class HE:
     def encode_number(self, number):
         pass
 
-    def encrypt_number(self, number):
-        pass
-
     def power(self, number, exp):
         pass
 
@@ -64,11 +69,11 @@ class HE:
 
 class BFVPyfhel(HE):
     def __init__(self, m=2048, p=None, p_bits=20, sec=128):
-            self.he = Pyfhel()
-            if p_bits is None:
-                self.he.contextGen(scheme="bfv", t=p, n=m, sec=sec)
-            else:
-                self.he.contextGen(scheme="bfv", t_bits=p_bits, n=m, sec=sec)
+        self.he = Pyfhel()
+        if p_bits is None:
+            self.he.contextGen(scheme='bfv', t=p, n=m, sec=sec)
+        else:
+            self.he.contextGen(scheme='bfv', t_bits=p_bits, n=m, sec=sec)
 
     def encode(self, x):
         if isinstance(x, np.ndarray):
@@ -83,7 +88,7 @@ class BFVPyfhel(HE):
     def encrypt(self, x):
         if isinstance(x, np.ndarray):
             raise TypeError
-        return self.he.encryptInt(np.array([x],dtype=np.int64))
+        return self.he.encryptInt(np.array([x], dtype=np.int64))
 
     def decrypt(self, x):
         if isinstance(x, np.ndarray):
@@ -96,25 +101,25 @@ class BFVPyfhel(HE):
     def generate_relin_keys(self):
         self.he.relinKeyGen()
 
-    # def get_public_key(self):
-    #     self.he.save_public_key(tmp_dir.name + "/pub.key")
-    #     with open(tmp_dir.name + "/pub.key", 'rb') as f:
-    #         return f.read()
-    #
-    # def get_relin_key(self):
-    #     self.he.save_relin_key(tmp_dir.name + "/relin.key")
-    #     with open(tmp_dir.name + "/relin.key", 'rb') as f:
-    #         return f.read()
-    #
-    # def load_public_key(self, key):
-    #     with open(tmp_dir.name + "/pub.key", 'wb') as f:
-    #         f.write(key)
-    #     self.he.load_public_key(tmp_dir.name + "/pub.key")
-    #
-    # def load_relin_key(self, key):
-    #     with open(tmp_dir.name + "/relin.key", 'wb') as f:
-    #         f.write(key)
-    #     self.he.load_relin_key(tmp_dir.name + "/relin.key")
+    def get_public_key(self):
+        self.he.save_public_key(tmp_dir.name + "/pub.key")
+        with open(tmp_dir.name + "/pub.key", 'rb') as f:
+            return f.read()
+
+    def get_relin_key(self):
+        self.he.save_relin_key(tmp_dir.name + "/relin.key")
+        with open(tmp_dir.name + "/relin.key", 'rb') as f:
+            return f.read()
+
+    def load_public_key(self, key):
+        with open(tmp_dir.name + "/pub.key", 'wb') as f:
+            f.write(key)
+        self.he.load_public_key(tmp_dir.name + "/pub.key")
+
+    def load_relin_key(self, key):
+        with open(tmp_dir.name + "/relin.key", 'wb') as f:
+            f.write(key)
+        self.he.load_relin_key(tmp_dir.name + "/relin.key")
 
     def encode_matrix(self, matrix):
         """Encode a float nD-matrix in a PyPtxt nD-matrix.
@@ -194,7 +199,6 @@ class BFVPyfhel(HE):
             return "Can't get NB without secret key."
 
 
-
 class CKKSPyfhel(HE):
     def __init__(self, m=2**14, scale=2**30, qi=[60, 30, 30, 30, 60]):
         self.he = Pyfhel()
@@ -215,9 +219,6 @@ class CKKSPyfhel(HE):
             raise TypeError
         return self.he.encryptFrac(np.array([x], dtype=np.float64))
 
-    def encrypt_number(self, x):
-        return self.he.encrypt(x)
-
     def decrypt(self, x):
         if isinstance(x, np.ndarray):
             raise TypeError
@@ -231,24 +232,33 @@ class CKKSPyfhel(HE):
         self.he.relinKeyGen()
 
     def get_public_key(self):
-        self.he.save_public_key(tmp_dir.name + "./pub.key")
-        with open(tmp_dir.name + "./pub.key", 'rb') as f:
+        self.he.save_public_key("../key_storage/pub.key")
+        with open("../key_storage/pub.key", 'rb') as f:
+            return f.read()
+    def get_secret_key(self):
+        self.he.save_secret_key("../key_storage/secret.key")
+        with open("../key_storage/secret.key", 'rb') as f:
             return f.read()
 
     def get_relin_key(self):
-        self.he.save_relin_key(tmp_dir.name + "/relin.key")
-        with open(tmp_dir.name + "./relin.key", 'rb') as f:
+        self.he.save_relin_key("../key_storage/relin.key")
+        with open("../key_storage/relin.key", 'rb') as f:
             return f.read()
 
     def load_public_key(self, key):
-        with open(tmp_dir.name + "./pub.key", 'wb') as f:
+        with open("../key_storage/pub.key", 'wb') as f:
             f.write(key)
-        self.he.load_public_key(tmp_dir.name + "./pub.key")
-    #
+        self.he.load_public_key("../key_storage/pub.key")
+
     def load_relin_key(self, key):
-        with open(tmp_dir.name + "./relin.key", 'wb') as f:
+        with open("../key_storage/relin.key", 'wb') as f:
             f.write(key)
-        self.he.load_relin_key(tmp_dir.name + "./relin.key")
+        self.he.load_relin_key("../key_storage/relin.key")
+
+    def load_secret_key(self, key):
+        with open("../key_storage/secret.key", 'wb') as f:
+            f.write(key)
+        self.he.load_secret_key("../key_storage/secret.key")
 
     def encode_matrix(self, matrix):
         """Encode a float nD-matrix in a PyPtxt nD-matrix.
@@ -315,9 +325,6 @@ class CKKSPyfhel(HE):
         except TypeError:
             return np.array([self.decrypt_matrix(m) for m in matrix])
 
-    # def encrypt_aa_number(self, number):
-    #     return self.encrypt_number(number)
-
     def encode_number(self, number):
         return self.encode(number)
 
@@ -338,8 +345,8 @@ class CKKSPyfhel(HE):
 class BFVPyfhel_Fractional(HE):
     def __init__(self, m, p, sec=128, int_digits=64, frac_digits=32):
         self.he = Pyfhel()
-        self.he.contextGen(scheme='bfv', t=p, n=m, sec=sec, scale_bits=int_digits,
-                           t_bits=frac_digits)
+        self.he.contextGen(p, m=m, sec=sec, fracDigits=frac_digits,
+                           intDigits=int_digits)
 
     def encode(self, x):
         if isinstance(x, np.ndarray):
@@ -364,28 +371,28 @@ class BFVPyfhel_Fractional(HE):
     def generate_keys(self):
         self.he.keyGen()
 
-    def generate_relin_keys(self):
-        self.he.relinKeyGen()
+    def generate_relin_keys(self, bitCount=60, size=3):
+        self.he.relinKeyGen(bitCount, size)
 
-    # def get_public_key(self):
-    #     self.he.savepublicKey(tmp_dir.name + "/pub.key")
-    #     with open(tmp_dir.name + "/pub.key", 'rb') as f:
-    #         return f.read()
-    #
-    # def get_relin_key(self):
-    #     self.he.saverelinKey(tmp_dir.name + "/relin.key")
-    #     with open(tmp_dir.name + "/relin.key", 'rb') as f:
-    #         return f.read()
-    #
-    # def load_public_key(self, key):
-    #     with open(tmp_dir.name + "/pub.key", 'wb') as f:
-    #         f.write(key)
-    #     self.he.restorepublicKey(tmp_dir.name + "/pub.key")
-    #
-    # def load_relin_key(self, key):
-    #     with open(tmp_dir.name + "/relin.key", 'wb') as f:
-    #         f.write(key)
-    #     self.he.restorerelinKey(tmp_dir.name + "/relin.key")
+    def get_public_key(self):
+        self.he.savepublicKey(tmp_dir.name + "/pub.key")
+        with open(tmp_dir.name + "/pub.key", 'rb') as f:
+            return f.read()
+
+    def get_relin_key(self):
+        self.he.saverelinKey(tmp_dir.name + "/relin.key")
+        with open(tmp_dir.name + "/relin.key", 'rb') as f:
+            return f.read()
+
+    def load_public_key(self, key):
+        with open(tmp_dir.name + "/pub.key", 'wb') as f:
+            f.write(key)
+        self.he.restorepublicKey(tmp_dir.name + "/pub.key")
+
+    def load_relin_key(self, key):
+        with open(tmp_dir.name + "/relin.key", 'wb') as f:
+            f.write(key)
+        self.he.restorerelinKey(tmp_dir.name + "/relin.key")
 
     def encode_matrix(self, matrix):
         """Encode a float nD-matrix in a PyPtxt nD-matrix.

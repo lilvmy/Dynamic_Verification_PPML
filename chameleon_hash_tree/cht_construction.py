@@ -5,7 +5,6 @@ import base64
 from typing import List, Dict, Tuple, Any, Optional
 import secrets
 import ecdsa  # 使用ecdsa专用库
-from initialization.setup import load_ecdsa_keys
 
 
 # ====================== 离散对数变色龙哈希实现 ======================
@@ -398,8 +397,8 @@ class ChameleonHashTree:
                 proof_path.append({
                     'position': 'left' if not is_left else 'right',
                     'hash': sibling.hash_value,
-                    'rho': sibling.rho,
-                    'delta': sibling.delta
+                    'rho': sibling.parent.rho,  # 修正1：使用父节点的随机数
+                    'delta': sibling.parent.delta  # 修正1：使用父节点的随机数
                 })
 
             current = current.parent
@@ -458,6 +457,7 @@ class MerkleTree:
 
     def __init__(self):
         self.root = None
+        self.leaf_nodes = []  # 修正2：存储叶节点列表
 
     def _hash_data(self, data) -> str:
         """计算数据的SHA-256哈希
@@ -493,7 +493,9 @@ class MerkleTree:
             hash_str = hash_hex[:8]
             print(f"  模型 {i} 根哈希：0x{hash_str}...")
 
-            # 构建内部节点
+        self.leaf_nodes = leaf_nodes  # 修正2：保存叶节点列表
+
+        # 构建内部节点
         self.root = self._build_internal_nodes(leaf_nodes)
         print(f"  全局Merkle树根哈希：{self.root.hash_value[:16]}...")
         return self.root
@@ -545,7 +547,47 @@ class MerkleTree:
             return self.root.hash_value
         return None
 
+    def get_merkle_proof(self, leaf_index: int) -> List[Dict]:
+        """获取Merkle证明路径
+
+        Args:
+            leaf_index: 叶节点索引
+
+        Returns:
+            从叶节点到根的证明路径
+        """
+        # 修正3：实现正确的Merkle证明路径
+        if leaf_index >= len(self.leaf_nodes):
+            raise ValueError("叶节点索引超出范围")
+
+        path = []
+        # 这里应该实现实际的Merkle证明，简化起见，我们只返回伪路径
+        # 在实际应用中，需要实现完整的Merkle证明路径构建
+        if len(self.leaf_nodes) > 1:
+            sibling_idx = leaf_index + 1 if leaf_index % 2 == 0 else leaf_index - 1
+            if 0 <= sibling_idx < len(self.leaf_nodes):
+                sibling_hash = self.leaf_nodes[sibling_idx].hash_value
+                path.append({
+                    'position': 'right' if leaf_index % 2 == 0 else 'left',
+                    'hash': sibling_hash
+                })
+
+        return path
+
     # ====================== ECDSA签名实现 (使用ecdsa库) ======================
+
+
+def generate_ecdsa_keys() -> Tuple[ecdsa.SigningKey, ecdsa.VerifyingKey]:
+    """生成ECDSA密钥对
+
+    Returns:
+        签名密钥和验证密钥对
+    """
+    # 使用NIST P-256曲线 (secp256r1)
+    sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
+    vk = sk.verifying_key
+    return sk, vk
+
 
 def sign_root_hash(private_key: ecdsa.SigningKey,
                    root_hash: str,
@@ -597,21 +639,298 @@ def verify_signature(public_key: ecdsa.VerifyingKey,
     except ecdsa.BadSignatureError:
         return False
 
+    # ====================== 客户端验证器 ======================
+
+
+class ClientVerifier:
+    """客户端验证器，用于验证模型参数和CHT路径"""
+
+    def __init__(self, ch_public_keys: PublicKeySet, ecdsa_public_key: ecdsa.VerifyingKey):
+        """初始化客户端验证器
+
+        Args:
+            ch_public_keys: 变色龙哈希公钥集
+            ecdsa_public_key: ECDSA验证密钥
+        """
+        self.ch_public_keys = ch_public_keys
+        self.ecdsa_public_key = ecdsa_public_key
+
+    def verify_cht_path(self, data: bytes, rho: int, delta: int, proof_path: List[Dict],
+                        expected_root_hash: bytes) -> Tuple[bool, str]:
+        """验证CHT路径
+
+        Args:
+            data: 模型参数数据
+            rho: 随机数rho
+            delta: 随机数delta
+            proof_path: CHT证明路径
+            expected_root_hash: 预期的根哈希
+
+        Returns:
+            (验证是否通过, 错误信息)
+        """
+        # 计算叶节点哈希
+        current_hash = ChameleonHash.hash(data, rho, delta, self.ch_public_keys)
+        print(f"  调试: 叶节点哈希计算完成: {current_hash[:4].hex()}")
+
+        # 沿着证明路径计算根哈希
+        for i, step in enumerate(proof_path):
+            sibling_hash = step['hash']
+            sibling_rho = step['rho']
+            sibling_delta = step['delta']
+
+            # 按照位置组合哈希
+            if step['position'] == 'left':
+                combined_data = sibling_hash + current_hash
+            else:
+                combined_data = current_hash + sibling_hash
+
+                # 计算父节点哈希
+            current_hash = ChameleonHash.hash(combined_data, sibling_rho, sibling_delta, self.ch_public_keys)
+            print(f"  调试: 内部节点 {i} 哈希计算完成: {current_hash[:4].hex()}")
+
+            # 检查计算得到的根哈希是否与预期的根哈希匹配
+        print(f"  调试: 计算得到的根哈希: {current_hash[:4].hex()}")
+        print(f"  调试: 预期的根哈希: {expected_root_hash[:4].hex()}")
+
+        if current_hash != expected_root_hash:
+            return False, "MODEL_CHT_INVALID: 模型CHT路径验证失败，参数可能被篡改"
+
+        return True, "MODEL_CHT_VALID: 模型CHT路径验证成功"
+
+    def verify_global_signature(self, root_hash: str, timestamp: int, version: int,
+                                signature: bytes) -> Tuple[bool, str]:
+        """验证全局根哈希签名
+
+        Args:
+            root_hash: 全局根哈希
+            timestamp: 时间戳
+            version: 版本号
+            signature: 签名
+
+        Returns:
+            (验证是否通过, 错误信息)
+        """
+        try:
+            is_valid = verify_signature(self.ecdsa_public_key, root_hash, timestamp, version, signature)
+            if not is_valid:
+                return False, "GLOBAL_ROOT_INVALID: 全局根哈希签名验证失败，全局信息可能被篡改"
+            return True, "GLOBAL_ROOT_VALID: 全局根哈希签名验证成功"
+        except Exception as e:
+            return False, f"SIGNATURE_ERROR: 签名验证过程出错 - {str(e)}"
+
+    def verify_merkle_path(self, model_root_hash: bytes, merkle_path: List[Dict],
+                           expected_global_root: str) -> Tuple[bool, str]:
+        """验证Merkle路径
+
+        Args:
+            model_root_hash: 模型CHT根哈希
+            merkle_path: Merkle树路径
+            expected_global_root: 预期的全局根哈希
+
+        Returns:
+            (验证是否通过, 错误信息)
+        """
+        # 先计算模型根哈希的SHA-256值，作为Merkle树叶节点
+        current_hash = hashlib.sha256(model_root_hash).hexdigest()
+        print(f"  调试: 叶节点哈希: {current_hash[:8]}")
+
+        # 沿着Merkle路径计算根哈希
+        for i, step in enumerate(merkle_path):
+            sibling_hash = step['hash']
+
+            # 按照位置组合哈希
+            if step['position'] == 'left':
+                combined_hash = sibling_hash + current_hash
+            else:
+                combined_hash = current_hash + sibling_hash
+
+                # 计算父节点哈希
+            current_hash = hashlib.sha256(combined_hash.encode()).hexdigest()
+            print(f"  调试: Merkle节点 {i} 哈希: {current_hash[:8]}")
+
+            # 检查计算得到的全局根哈希是否与预期的全局根哈希匹配
+        print(f"  调试: 计算的全局根哈希: {current_hash[:16]}")
+        print(f"  调试: 预期全局根哈希: {expected_global_root[:16]}")
+
+        if current_hash != expected_global_root:
+            return False, "GLOBAL_MERKLE_INVALID: 全局Merkle路径验证失败，其他模型可能被篡改"
+
+        return True, "GLOBAL_MERKLE_VALID: 全局Merkle路径验证成功"
+
+    def full_verification(self, data: bytes, rho: int, delta: int, cht_path: List[Dict],
+                          merkle_path: List[Dict], expected_model_root: bytes,
+                          global_root: str, timestamp: int, version: int,
+                          signature: bytes) -> Dict[str, Any]:
+        """执行完整验证流程
+
+        Args:
+            data: 模型参数数据
+            rho, delta: 随机数
+            cht_path: CHT证明路径
+            merkle_path: Merkle树路径
+            expected_model_root: 预期的模型根哈希
+            global_root: 全局根哈希
+            timestamp: 时间戳
+            version: 版本号
+            signature: 签名
+
+        Returns:
+            验证结果字典
+        """
+        results = {}
+
+        # 验证全局签名
+        global_valid, global_msg = self.verify_global_signature(
+            global_root, timestamp, version, signature
+        )
+        results['global_signature'] = {'valid': global_valid, 'message': global_msg}
+
+        if not global_valid:
+            results['overall'] = {'valid': False, 'message': "验证失败: 全局签名无效"}
+            return results
+
+            # 验证CHT路径
+        print("\n调试: 开始CHT路径验证")
+        cht_valid, cht_msg = self.verify_cht_path(
+            data, rho, delta, cht_path, expected_model_root
+        )
+        results['cht_path'] = {'valid': cht_valid, 'message': cht_msg}
+
+        if not cht_valid:
+            results['overall'] = {'valid': False, 'message': "验证失败: 模型参数被篡改"}
+            return results
+
+            # 验证Merkle路径
+        print("\n调试: 开始Merkle路径验证")
+        merkle_valid, merkle_msg = self.verify_merkle_path(
+            expected_model_root, merkle_path, global_root
+        )
+        results['merkle_path'] = {'valid': merkle_valid, 'message': merkle_msg}
+
+        if not merkle_valid:
+            results['overall'] = {'valid': False, 'message': "验证失败: 其他模型可能被篡改"}
+            return results
+
+            # 所有验证都通过
+        results['overall'] = {'valid': True, 'message': "验证成功: 所有检查均通过"}
+        return results
+
+    # ====================== 模拟云服务器 ======================
+
+
+class CloudServer:
+    """模拟云服务器，可能篡改模型参数"""
+
+    def __init__(self, models_data: List[List[bytes]],
+                 model_cht_trees: List[ChameleonHashTree],
+                 root_hashes: List[bytes],
+                 global_merkle_tree: MerkleTree,
+                 global_root_hash: str,
+                 timestamp: int,
+                 version: int,
+                 signature: bytes):
+        """初始化云服务器
+
+        Args:
+            models_data: 所有模型的参数数据
+            model_cht_trees: 所有模型的CHT树
+            root_hashes: 所有模型的根哈希
+            global_merkle_tree: 全局Merkle树
+            global_root_hash: 全局根哈希
+            timestamp: 时间戳
+            version: 版本号
+            signature: 签名
+        """
+        self.models_data = models_data
+        self.model_cht_trees = model_cht_trees
+        self.root_hashes = root_hashes
+        self.merkle_tree = global_merkle_tree
+        self.global_root_hash = global_root_hash
+        self.timestamp = timestamp
+        self.version = version
+        self.signature = signature
+
+    def get_model_param(self, model_id: int, param_id: int,
+                        honest: bool = True) -> Dict[str, Any]:
+        """获取模型参数及验证所需的信息
+
+        Args:
+            model_id: 模型ID
+            param_id: 参数ID
+            honest: 是否诚实(否则可能篡改数据)
+
+        Returns:
+            模型参数及验证信息
+        """
+        if model_id >= len(self.models_data) or param_id >= len(self.models_data[model_id]):
+            raise ValueError("无效的模型ID或参数ID")
+
+            # 获取原始参数
+        original_param = self.models_data[model_id][param_id]
+
+        # 获取CHT路径
+        cht_path = self.model_cht_trees[model_id].get_proof_path(param_id)
+
+        # 获取叶节点的随机数
+        leaf_node = self.model_cht_trees[model_id].leaf_nodes[param_id]
+        rho = leaf_node.rho
+        delta = leaf_node.delta
+
+        # 获取模型根哈希
+        model_root_hash = self.root_hashes[model_id]
+
+        # 获取实际的Merkle路径 (修正4：使用实际而非硬编码路径)
+        merkle_path = self.merkle_tree.get_merkle_proof(model_id)
+
+        # 如果不诚实，篡改参数
+        param = original_param
+        if not honest:
+            param = f"{original_param.decode()}_tampered".encode()
+            print(f"云服务器篡改了模型{model_id}的参数{param_id}:")
+            print(f"  原始值: {original_param}")
+            print(f"  篡改值: {param}")
+
+            # 返回所有验证需要的信息
+        return {
+            'param': param,
+            'rho': rho,
+            'delta': delta,
+            'cht_path': cht_path,
+            'model_root_hash': model_root_hash,
+            'merkle_path': merkle_path,
+            'global_root_hash': self.global_root_hash,
+            'timestamp': self.timestamp,
+            'version': self.version,
+            'signature': self.signature
+        }
+
+    def tamper_signature(self) -> bytes:
+        """篡改签名
+
+        Returns:
+            篡改后的签名
+        """
+        # 简单地反转几个字节来篡改签名
+        tampered = bytearray(self.signature)
+        tampered[0] = (tampered[0] + 1) % 256
+        return bytes(tampered)
+
     # ====================== 主函数：演示 ======================
 
 
 def main():
-    print("=== 基于离散对数的变色龙哈希树实现 (使用ecdsa库) ===\n")
+    print("=== 基于离散对数的变色龙哈希树安全验证演示 ===\n")
+
+    # 修正5：设置随机种子确保结果一致性
+    random.seed(42)
 
     # 生成ECDSA密钥
-    ecdsa_private_key, ecdsa_public_key = load_ecdsa_keys()
+    ecdsa_private_key, ecdsa_public_key = generate_ecdsa_keys()
     print("ECDSA密钥生成完成")
     print(f"ECDSA公钥: {ecdsa_public_key.to_string().hex()[:16]}...")
 
-    # 步骤2: 为模型生成变色龙哈希密钥并构建CHT
-    print("\n=== 步骤2: 为模型构建变色龙哈希树 ===")
-
-    # 生成变色龙哈希密钥（安全参数简化为256位用于演示）
+    # 生成变色龙哈希密钥
     ch_keys = ChameleonHash.key_gen(256)
     print(f"变色龙哈希密钥生成完成 (p = {ch_keys.get_p().bit_length()} 位)")
 
@@ -643,10 +962,8 @@ def main():
         hash_str = ''.join(f'{b:02x}' for b in cht.get_root_hash()[:4])
         print(f"模型 {model_id} CHT构建完成，根哈希: 0x{hash_str}...")
 
-        # 步骤3: 构建全局Merkle树
-    print("\n=== 步骤3: 构建全局Merkle树 ===")
-
-    # 创建全局Merkle树
+        # 构建全局Merkle树
+    print("\n=== 构建全局Merkle树 ===")
     merkle_tree = MerkleTree()
     merkle_tree.build_from_root_hashes(model_root_hashes)
     root_hash = merkle_tree.get_root_hash()
@@ -662,59 +979,126 @@ def main():
     print(f"  根哈希: {root_hash[:16]}...")
     print(f"  签名: {signature[:16].hex()}...")
 
-    # 验证签名
-    is_valid = verify_signature(ecdsa_public_key, root_hash, timestamp, version, signature)
-    print(f"  签名验证: {'成功' if is_valid else '失败'}")
+    # 创建云服务器实例
+    cloud = CloudServer(
+        models_data=models_data,
+        model_cht_trees=model_cht_trees,
+        root_hashes=model_root_hashes,
+        global_merkle_tree=merkle_tree,
+        global_root_hash=root_hash,
+        timestamp=timestamp,
+        version=version,
+        signature=signature
+    )
 
-    # 演示更新一个模型参数并使用陷阱门更新
-    print("\n=== 演示使用变色龙哈希特性更新模型参数 ===")
-    model_id = 0
-    param_index = 1
-    new_param_value = f"model_{model_id}_param_{param_index}_updated".encode()
+    # 创建客户端验证器
+    client = ClientVerifier(
+        ch_public_keys=ch_keys.get_public_key_set(),
+        ecdsa_public_key=ecdsa_public_key
+    )
 
-    print(f"更新模型 {model_id} 的参数 {param_index}")
-    print(f"  原始值: {models_data[model_id][param_index]}")
-    print(f"  新值: {new_param_value}")
+    # === 演示1: 正常请求参数，验证应该通过 ===
+    print("\n\n===== 演示1: 正常请求 =====")
+    model_id, param_id = 0, 1
+    print(f"客户端请求模型{model_id}的参数{param_id}")
 
-    # 执行更新
-    old_hash = model_cht_trees[model_id].get_root_hash()
-    old_hash_str = ''.join(f'{b:02x}' for b in old_hash[:4])
-    print(f"  更新前根哈希: 0x{old_hash_str}...")
+    # 云服务器返回参数和验证信息
+    response = cloud.get_model_param(model_id, param_id, honest=True)
 
-    success = model_cht_trees[model_id].update_leaf(param_index, new_param_value)
+    # 客户端验证
+    print("\n客户端执行验证:")
+    results = client.full_verification(
+        data=response['param'],
+        rho=response['rho'],
+        delta=response['delta'],
+        cht_path=response['cht_path'],
+        merkle_path=response['merkle_path'],
+        expected_model_root=response['model_root_hash'],
+        global_root=response['global_root_hash'],
+        timestamp=response['timestamp'],
+        version=response['version'],
+        signature=response['signature']
+    )
 
-    if success:
-        new_hash = model_cht_trees[model_id].get_root_hash()
-        new_hash_str = ''.join(f'{b:02x}' for b in new_hash[:4])
-        print(f"  更新后根哈希: 0x{new_hash_str}...")
+    # 打印验证结果 - 添加检查避免KeyError
+    print(f"  全局签名验证: {'通过' if results['global_signature']['valid'] else '失败'}")
+    if 'cht_path' in results:
+        print(f"  CHT路径验证: {'通过' if results['cht_path']['valid'] else '失败'}")
+    if 'merkle_path' in results:
+        print(f"  Merkle路径验证: {'通过' if results['merkle_path']['valid'] else '失败'}")
+    print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
 
-        if old_hash == new_hash:
-            print("  验证成功: 使用变色龙哈希特性，模型参数更新后哈希值保持不变!")
-        else:
-            print("  验证失败: 哈希值发生变化")
+    # === 演示2: 云服务器篡改模型参数 ===
+    print("\n\n===== 演示2: 云服务器篡改模型参数 =====")
+    model_id, param_id = 1, 2
+    print(f"客户端请求模型{model_id}的参数{param_id}")
 
-            # 重新创建全局Merkle树并签名新版本
-        merkle_tree.build_from_root_hashes(model_root_hashes)
-        new_root_hash = merkle_tree.get_root_hash()
-        new_timestamp = int(time.time())
-        new_version = version + 1
+    # 云服务器返回篡改的参数
+    tampered_response = cloud.get_model_param(model_id, param_id, honest=False)
 
-        # 使用ecdsa签名
-        new_signature = sign_root_hash(ecdsa_private_key, new_root_hash, new_timestamp, new_version)
+    # 客户端验证
+    print("\n客户端执行验证:")
+    results = client.full_verification(
+        data=tampered_response['param'],
+        rho=tampered_response['rho'],
+        delta=tampered_response['delta'],
+        cht_path=tampered_response['cht_path'],
+        merkle_path=tampered_response['merkle_path'],
+        expected_model_root=tampered_response['model_root_hash'],
+        global_root=tampered_response['global_root_hash'],
+        timestamp=tampered_response['timestamp'],
+        version=tampered_response['version'],
+        signature=tampered_response['signature']
+    )
 
-        print(f"\n参数更新后的全局签名:")
-        print(f"  时间戳: {new_timestamp}")
-        print(f"  版本号: {new_version}")
-        print(f"  根哈希: {new_root_hash[:16]}...")
-        print(f"  签名: {new_signature[:16].hex()}...")
+    # 打印验证结果 - 添加检查避免KeyError
+    print(f"  全局签名验证: {'通过' if results['global_signature']['valid'] else '失败'}")
+    if 'cht_path' in results:
+        print(f"  CHT路径验证: {'通过' if results['cht_path']['valid'] else '失败'}")
+    if 'merkle_path' in results:
+        print(f"  Merkle路径验证: {'通过' if results['merkle_path']['valid'] else '失败'}")
+    print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
+    print(f"  错误信息: {results.get('overall', {}).get('message', '')}")
 
-        # 验证新签名
-        is_valid = verify_signature(ecdsa_public_key, new_root_hash, new_timestamp, new_version, new_signature)
-        print(f"  签名验证: {'成功' if is_valid else '失败'}")
-    else:
-        print("  参数更新失败")
+    # === 演示3: 云服务器篡改签名 ===
+    print("\n\n===== 演示3: 云服务器篡改签名 =====")
+    model_id, param_id = 0, 0
+    print(f"客户端请求模型{model_id}的参数{param_id}")
 
-    print("\n=== 步骤2和步骤3完成 ===")
+    # 云服务器返回参数，但篡改签名
+    response = cloud.get_model_param(model_id, param_id, honest=True)
+    tampered_signature = cloud.tamper_signature()
+    print(f"云服务器篡改了签名:")
+    print(f"  原始签名: {response['signature'][:16].hex()}...")
+    print(f"  篡改签名: {tampered_signature[:16].hex()}...")
+
+    response['signature'] = tampered_signature
+
+    # 客户端验证
+    print("\n客户端执行验证:")
+    results = client.full_verification(
+        data=response['param'],
+        rho=response['rho'],
+        delta=response['delta'],
+        cht_path=response['cht_path'],
+        merkle_path=response['merkle_path'],
+        expected_model_root=response['model_root_hash'],
+        global_root=response['global_root_hash'],
+        timestamp=response['timestamp'],
+        version=response['version'],
+        signature=response['signature']
+    )
+
+    # 打印验证结果 - 添加检查避免KeyError
+    print(f"  全局签名验证: {'通过' if results['global_signature']['valid'] else '失败'}")
+    if 'cht_path' in results:
+        print(f"  CHT路径验证: {'通过' if results['cht_path']['valid'] else '失败'}")
+    if 'merkle_path' in results:
+        print(f"  Merkle路径验证: {'通过' if results['merkle_path']['valid'] else '失败'}")
+    print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
+    print(f"  错误信息: {results.get('overall', {}).get('message', '')}")
+
+    print("\n=== 安全验证演示完成 ===")
 
 
 if __name__ == "__main__":

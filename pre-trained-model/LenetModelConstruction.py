@@ -161,8 +161,20 @@ def main():
     torch.save(model.state_dict(), "./model/lenet1_model.pt")
 
 if __name__ == "__main__":
-    setup_logging()
-    main()
+    # setup_logging()
+    # main()
+
+    model = torch.load("/home/lilvmy/paper-demo/Results_Verification_PPML/pre-trained-model/model/lenet1_model.pt", weights_only=True)
+    model_params = {}
+    for name, param in model.items():
+        model_params[name] = param.cpu().numpy()
+
+    np.save("./model/lenet1_model_params.npy", model_params)
+
+    load_params = np.load("./model/lenet1_model_params.npy", allow_pickle=True).item()
+
+    print(load_params)
+
 
 
 

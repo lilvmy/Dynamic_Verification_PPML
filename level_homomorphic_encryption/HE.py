@@ -25,12 +25,17 @@ class HE:
     def get_secret_key(self):
         pass
 
+    def get_rotate_key(self):
+        pass
+
     def load_public_key(self, key):
         pass
 
     def load_relin_key(self, key):
         pass
     def load_secret_key(self, key):
+        pass
+    def load_rotate_key(self, key):
         pass
 
     def encode_matrix(self, matrix):
@@ -239,7 +244,10 @@ class CKKSPyfhel(HE):
         self.he.save_secret_key("../key_storage/secret.key")
         with open("../key_storage/secret.key", 'rb') as f:
             return f.read()
-
+    def get_rotate_key(self):
+        self.he.save_rotate_key("../key_storage/rotate.key")
+        with open("../key_storage/rotate.key", "rb") as f:
+            return f.read()
     def get_relin_key(self):
         self.he.save_relin_key("../key_storage/relin.key")
         with open("../key_storage/relin.key", 'rb') as f:
@@ -259,6 +267,11 @@ class CKKSPyfhel(HE):
         with open("../key_storage/secret.key", 'wb') as f:
             f.write(key)
         self.he.load_secret_key("../key_storage/secret.key")
+
+    def load_rotate_key(self, key):
+        with open("../key_storage/rotate.key", "wb") as f:
+            f.write(key)
+        self.he.load_rotate_key("../key_storage/rotate.key")
 
     def encode_matrix(self, matrix):
         """Encode a float nD-matrix in a PyPtxt nD-matrix.

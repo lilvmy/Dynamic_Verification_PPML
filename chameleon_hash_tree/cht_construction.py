@@ -5,6 +5,7 @@ import base64
 from typing import List, Dict, Tuple, Any, Optional
 import secrets
 import ecdsa  # 使用ecdsa专用库
+from initialization.setup import load_ecdsa_keys
 
 
 # ====================== 离散对数变色龙哈希实现 ======================
@@ -397,8 +398,8 @@ class ChameleonHashTree:
                 proof_path.append({
                     'position': 'left' if not is_left else 'right',
                     'hash': sibling.hash_value,
-                    'rho': sibling.parent.rho,  # 修正1：使用父节点的随机数
-                    'delta': sibling.parent.delta  # 修正1：使用父节点的随机数
+                    'rho': current.parent.rho,  # 使用父节点的随机数
+                    'delta': current.parent.delta  # 使用父节点的随机数
                 })
 
             current = current.parent
@@ -440,6 +441,22 @@ class ChameleonHashTree:
         print(f"叶节点 {leaf_index} 更新成功，哈希值保持: 0x{hash_str}...")
         return True
 
+    def audit_leaf(self, leaf_index: int, expected_data: bytes) -> bool:
+        """审计叶节点数据是否与预期一致
+
+        Args:
+            leaf_index: 叶节点索引
+            expected_data: 预期的数据
+
+        Returns:
+            数据是否一致
+        """
+        if leaf_index >= len(self.leaf_nodes):
+            return False
+
+        leaf = self.leaf_nodes[leaf_index]
+        return leaf.data == expected_data
+
     # ====================== Merkle树实现 ======================
 
 
@@ -457,7 +474,7 @@ class MerkleTree:
 
     def __init__(self):
         self.root = None
-        self.leaf_nodes = []  # 修正2：存储叶节点列表
+        self.leaf_nodes = []  # 存储叶节点列表
 
     def _hash_data(self, data) -> str:
         """计算数据的SHA-256哈希
@@ -493,7 +510,7 @@ class MerkleTree:
             hash_str = hash_hex[:8]
             print(f"  模型 {i} 根哈希：0x{hash_str}...")
 
-        self.leaf_nodes = leaf_nodes  # 修正2：保存叶节点列表
+        self.leaf_nodes = leaf_nodes  # 保存叶节点列表
 
         # 构建内部节点
         self.root = self._build_internal_nodes(leaf_nodes)
@@ -556,13 +573,12 @@ class MerkleTree:
         Returns:
             从叶节点到根的证明路径
         """
-        # 修正3：实现正确的Merkle证明路径
+        # 实现正确的Merkle证明路径
         if leaf_index >= len(self.leaf_nodes):
             raise ValueError("叶节点索引超出范围")
 
         path = []
-        # 这里应该实现实际的Merkle证明，简化起见，我们只返回伪路径
-        # 在实际应用中，需要实现完整的Merkle证明路径构建
+        # 这里实现简化版的Merkle证明路径，实际应用需要完整实现
         if len(self.leaf_nodes) > 1:
             sibling_idx = leaf_index + 1 if leaf_index % 2 == 0 else leaf_index - 1
             if 0 <= sibling_idx < len(self.leaf_nodes):
@@ -577,16 +593,16 @@ class MerkleTree:
     # ====================== ECDSA签名实现 (使用ecdsa库) ======================
 
 
-def generate_ecdsa_keys() -> Tuple[ecdsa.SigningKey, ecdsa.VerifyingKey]:
-    """生成ECDSA密钥对
-
-    Returns:
-        签名密钥和验证密钥对
-    """
-    # 使用NIST P-256曲线 (secp256r1)
-    sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
-    vk = sk.verifying_key
-    return sk, vk
+# def generate_ecdsa_keys() -> Tuple[ecdsa.SigningKey, ecdsa.VerifyingKey]:
+#     """生成ECDSA密钥对
+#
+#     Returns:
+#         签名密钥和验证密钥对
+#     """
+#     # 使用NIST P-256曲线 (secp256r1)
+#     sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
+#     vk = sk.verifying_key
+#     return sk, vk
 
 
 def sign_root_hash(private_key: ecdsa.SigningKey,
@@ -654,6 +670,20 @@ class ClientVerifier:
         """
         self.ch_public_keys = ch_public_keys
         self.ecdsa_public_key = ecdsa_public_key
+        # 存储已知的原始模型参数
+        self.known_model_params = {}
+
+    def register_model_param(self, model_id: int, param_id: int, data: bytes):
+        """注册模型参数的预期值，用于后续审计
+
+        Args:
+            model_id: 模型ID
+            param_id: 参数ID
+            data: 参数数据
+        """
+        if model_id not in self.known_model_params:
+            self.known_model_params[model_id] = {}
+        self.known_model_params[model_id][param_id] = data
 
     def verify_cht_path(self, data: bytes, rho: int, delta: int, proof_path: List[Dict],
                         expected_root_hash: bytes) -> Tuple[bool, str]:
@@ -816,6 +846,52 @@ class ClientVerifier:
         results['overall'] = {'valid': True, 'message': "验证成功: 所有检查均通过"}
         return results
 
+    def audit_model_params(self, cloud_server) -> Dict[str, List]:
+        """审计所有模型参数，检测哪些参数被修改了
+
+        Args:
+            cloud_server: 云服务器实例，用于获取当前参数
+
+        Returns:
+            被修改的参数列表，按模型分组
+        """
+        modified_params = {}
+
+        print("\n开始全面审计...")
+        # 遍历所有已知的模型参数
+        for model_id in self.known_model_params:
+            modified_in_model = []
+
+            for param_id in self.known_model_params[model_id]:
+                # 获取当前参数
+                try:
+                    response = cloud_server.get_model_param(model_id, param_id, honest=True)
+                    current_param = response['param']
+                    expected_param = self.known_model_params[model_id][param_id]
+
+                    # 检查参数是否被修改
+                    if current_param != expected_param:
+                        modified_in_model.append({
+                            'param_id': param_id,
+                            'original': expected_param,
+                            'current': current_param
+                        })
+                        print(f"检测到模型 {model_id} 参数 {param_id} 被修改:")
+                        print(f"  原始值: {expected_param}")
+                        print(f"  当前值: {current_param}")
+                except Exception as e:
+                    print(f"审计模型 {model_id} 参数 {param_id} 时出错: {str(e)}")
+
+            if modified_in_model:
+                modified_params[model_id] = modified_in_model
+
+        if not modified_params:
+            print("审计完成: 未发现被修改的参数")
+        else:
+            print(f"审计完成: 发现 {sum(len(mods) for mods in modified_params.values())} 个参数被修改")
+
+        return modified_params
+
     # ====================== 模拟云服务器 ======================
 
 
@@ -829,7 +905,8 @@ class CloudServer:
                  global_root_hash: str,
                  timestamp: int,
                  version: int,
-                 signature: bytes):
+                 signature: bytes,
+                 ch_keys: PrivateKeySet):
         """初始化云服务器
 
         Args:
@@ -841,6 +918,7 @@ class CloudServer:
             timestamp: 时间戳
             version: 版本号
             signature: 签名
+            ch_keys: 变色龙哈希密钥（通常只在服务端持有）
         """
         self.models_data = models_data
         self.model_cht_trees = model_cht_trees
@@ -850,6 +928,13 @@ class CloudServer:
         self.timestamp = timestamp
         self.version = version
         self.signature = signature
+        self.ch_keys = ch_keys  # 云服务器通常持有私钥
+
+        # 特殊用途：创建一个未经授权的替代模型
+        self.alt_model_data = [f"unauthorized_model_param_{i}".encode() for i in range(4)]
+
+        # 记录被修改的参数
+        self.modified_params = {}
 
     def get_model_param(self, model_id: int, param_id: int,
                         honest: bool = True) -> Dict[str, Any]:
@@ -880,7 +965,7 @@ class CloudServer:
         # 获取模型根哈希
         model_root_hash = self.root_hashes[model_id]
 
-        # 获取实际的Merkle路径 (修正4：使用实际而非硬编码路径)
+        # 获取实际的Merkle路径
         merkle_path = self.merkle_tree.get_merkle_proof(model_id)
 
         # 如果不诚实，篡改参数
@@ -905,6 +990,34 @@ class CloudServer:
             'signature': self.signature
         }
 
+    def get_alt_model_param(self, model_id: int, param_id: int) -> Dict[str, Any]:
+        """获取替代模型参数，同时提供原始模型的验证信息（模拟欺骗）
+
+        Args:
+            model_id: 原始模型ID（用于获取验证信息）
+            param_id: 参数ID
+
+        Returns:
+            替代模型参数及原始模型的验证信息
+        """
+        if model_id >= len(self.models_data) or param_id >= len(self.models_data[model_id]):
+            raise ValueError("无效的模型ID或参数ID")
+
+            # 替代模型参数
+        alt_param = self.alt_model_data[param_id]
+
+        # 但使用原始模型的验证信息
+        response = self.get_model_param(model_id, param_id, honest=True)
+
+        # 替换参数值
+        response['param'] = alt_param
+
+        print(f"云服务器使用替代模型而非客户指定的模型:")
+        print(f"  客户请求的模型参数: {self.models_data[model_id][param_id]}")
+        print(f"  服务器提供的替代参数: {alt_param}")
+
+        return response
+
     def tamper_signature(self) -> bytes:
         """篡改签名
 
@@ -916,17 +1029,58 @@ class CloudServer:
         tampered[0] = (tampered[0] + 1) % 256
         return bytes(tampered)
 
+    def modify_other_model_param(self, target_model_id: int, target_param_id: int) -> bool:
+        """修改其他模型参数（非当前使用的模型）
+
+        使用变色龙哈希的可碰撞特性，保持全局哈希值不变
+
+        Args:
+            target_model_id: 目标模型ID
+            target_param_id: 目标参数ID
+
+        Returns:
+            修改是否成功
+        """
+        if target_model_id >= len(self.models_data) or target_param_id >= len(self.models_data[target_model_id]):
+            return False
+
+            # 保存原始参数
+        original_param = self.models_data[target_model_id][target_param_id]
+
+        # 创建修改后的参数
+        modified_param = f"{original_param.decode()}_secretly_modified".encode()
+
+        # 使用变色龙哈希的可碰撞性质更新目标参数
+        success = self.model_cht_trees[target_model_id].update_leaf(target_param_id, modified_param)
+
+        if success:
+            # 更新模型数据
+            self.models_data[target_model_id][target_param_id] = modified_param
+
+            # 记录修改
+            if target_model_id not in self.modified_params:
+                self.modified_params[target_model_id] = []
+            self.modified_params[target_model_id].append(target_param_id)
+
+            print(f"云服务器悄悄修改了模型 {target_model_id} 的参数 {target_param_id}:")
+            print(f"  原始值: {original_param}")
+            print(f"  修改后: {modified_param}")
+            print(f"  注意: 由于变色龙哈希的可碰撞性，全局哈希值保持不变")
+
+        return success
+
     # ====================== 主函数：演示 ======================
 
 
 def main():
     print("=== 基于离散对数的变色龙哈希树安全验证演示 ===\n")
 
-    # 修正5：设置随机种子确保结果一致性
+    # 设置随机种子确保结果一致性
     random.seed(42)
 
-    # 生成ECDSA密钥
-    ecdsa_private_key, ecdsa_public_key = generate_ecdsa_keys()
+    # 加载ECDSA密钥
+    ecdsa_private_key, ecdsa_public_key = load_ecdsa_keys()
+
     print("ECDSA密钥生成完成")
     print(f"ECDSA公钥: {ecdsa_public_key.to_string().hex()[:16]}...")
 
@@ -939,8 +1093,8 @@ def main():
     model_cht_trees = []
     model_root_hashes = []
 
-    # 创建2个示例模型
-    for model_id in range(2):
+    # 创建3个示例模型，增加一个模型使演示更丰富
+    for model_id in range(3):
         print(f"\n构建模型 {model_id} 的CHT:")
 
         # 模拟模型参数块 (每个模型有4个参数块)
@@ -988,7 +1142,8 @@ def main():
         global_root_hash=root_hash,
         timestamp=timestamp,
         version=version,
-        signature=signature
+        signature=signature,
+        ch_keys=ch_keys
     )
 
     # 创建客户端验证器
@@ -997,7 +1152,15 @@ def main():
         ecdsa_public_key=ecdsa_public_key
     )
 
-    # === 演示1: 正常请求参数，验证应该通过 ===
+    # 客户端注册所有原始模型参数，用于后续审计
+    print("\n客户端注册所有原始模型参数用于审计...")
+    for model_id in range(len(models_data)):
+        for param_id in range(len(models_data[model_id])):
+            client.register_model_param(
+                model_id, param_id, models_data[model_id][param_id]
+            )
+
+            # === 演示1: 正常请求参数，验证应该通过 ===
     print("\n\n===== 演示1: 正常请求 =====")
     model_id, param_id = 0, 1
     print(f"客户端请求模型{model_id}的参数{param_id}")
@@ -1097,6 +1260,137 @@ def main():
         print(f"  Merkle路径验证: {'通过' if results['merkle_path']['valid'] else '失败'}")
     print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
     print(f"  错误信息: {results.get('overall', {}).get('message', '')}")
+
+    # === 演示4: 云服务器使用非指定模型 ===
+    print("\n\n===== 演示4: 云服务器使用非指定模型 =====")
+    model_id, param_id = 0, 2
+    print(f"客户端请求模型{model_id}的参数{param_id}")
+
+    # 云服务器使用替代模型，但提供原始模型的验证信息
+    alt_response = cloud.get_alt_model_param(model_id, param_id)
+
+    # 客户端验证
+    print("\n客户端执行验证:")
+    results = client.full_verification(
+        data=alt_response['param'],
+        rho=alt_response['rho'],
+        delta=alt_response['delta'],
+        cht_path=alt_response['cht_path'],
+        merkle_path=alt_response['merkle_path'],
+        expected_model_root=alt_response['model_root_hash'],
+        global_root=alt_response['global_root_hash'],
+        timestamp=alt_response['timestamp'],
+        version=alt_response['version'],
+        signature=alt_response['signature']
+    )
+
+    # 打印验证结果
+    print(f"  全局签名验证: {'通过' if results['global_signature']['valid'] else '失败'}")
+    if 'cht_path' in results:
+        print(f"  CHT路径验证: {'通过' if results['cht_path']['valid'] else '失败'}")
+    if 'merkle_path' in results:
+        print(f"  Merkle路径验证: {'通过' if results['merkle_path']['valid'] else '失败'}")
+    print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
+    print(f"  错误信息: {results.get('overall', {}).get('message', '')}")
+
+    # === 演示5: 检测非当前请求模型的修改 ===
+    print("\n\n===== 演示5: 检测非当前请求模型的修改 =====")
+
+    # 云服务器秘密修改模型2的参数0，客户端将请求模型0的参数
+    # 通过变色龙哈希的碰撞特性，修改后整体哈希值不变，常规验证会通过
+    target_model_id, target_param_id = 2, 1
+    other_model_id, other_param_id = 0, 3
+
+    print(f"云服务器利用变色龙哈希特性悄悄修改模型{target_model_id}的参数{target_param_id}")
+    cloud.modify_other_model_param(target_model_id, target_param_id)
+
+    # 客户端请求完全不同的模型参数，验证应该通过
+    print(f"\n客户端请求另一个模型{other_model_id}的参数{other_param_id}")
+    response = cloud.get_model_param(other_model_id, other_param_id, honest=True)
+
+    # 客户端验证当前请求的参数
+    print("\n客户端执行验证:")
+    results = client.full_verification(
+        data=response['param'],
+        rho=response['rho'],
+        delta=response['delta'],
+        cht_path=response['cht_path'],
+        merkle_path=response['merkle_path'],
+        expected_model_root=response['model_root_hash'],
+        global_root=response['global_root_hash'],
+        timestamp=response['timestamp'],
+        version=response['version'],
+        signature=response['signature']
+    )
+
+    # 打印验证结果
+    print(f"  全局签名验证: {'通过' if results['global_signature']['valid'] else '失败'}")
+    if 'cht_path' in results:
+        print(f"  CHT路径验证: {'通过' if results['cht_path']['valid'] else '失败'}")
+    if 'merkle_path' in results:
+        print(f"  Merkle路径验证: {'通过' if results['merkle_path']['valid'] else '失败'}")
+    print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
+
+    print("\n验证通过，但参数被修改了！客户端现在进行全面审计来检测被修改的参数...")
+
+    # 客户端进行全面审计，检测哪些模型参数被修改
+    modified_params = client.audit_model_params(cloud)
+
+    # 打印审计结果
+    if modified_params:
+        print("\n审计结果:")
+        for model_id, params in modified_params.items():
+            print(f"  模型 {model_id} 被修改的参数:")
+            for param_info in params:
+                param_id = param_info['param_id']
+                original = param_info['original']
+                current = param_info['current']
+                print(f"    参数 {param_id}:")
+                print(f"      原始值: {original}")
+                print(f"      当前值: {current}")
+                print(f"      变化: {original} -> {current}")
+    else:
+        print("审计未发现任何被修改的参数")
+
+        # 客户端可以验证被修改参数的路径是否仍然有效
+    if modified_params:
+        detected_model_id = list(modified_params.keys())[0]
+        detected_param_id = modified_params[detected_model_id][0]['param_id']
+
+        print(f"\n验证被修改的参数 (模型{detected_model_id} 参数{detected_param_id}) 路径是否有效...")
+
+        # 获取被修改参数的信息
+        modified_response = cloud.get_model_param(detected_model_id, detected_param_id, honest=True)
+
+        # 使用原始数据进行验证
+        original_data = client.known_model_params[detected_model_id][detected_param_id]
+
+        # 检查使用原始数据是否能通过验证（应该失败，因为路径上的随机数已经被修改）
+        print("\n使用原始参数验证被修改的路径:")
+
+        try:
+            cht_valid, cht_msg = client.verify_cht_path(
+                original_data,  # 使用原始数据
+                modified_response['rho'],  # 但使用修改后的随机数
+                modified_response['delta'],  # 修改后的随机数
+                modified_response['cht_path'],  # 修改后的路径
+                modified_response['model_root_hash']  # 模型根哈希
+            )
+            print(f"  验证结果: {'通过' if cht_valid else '失败'}")
+            print(f"  消息: {cht_msg}")
+
+            if not cht_valid:
+                print("  这证明云服务器使用了变色龙哈希的碰撞特性修改了参数，并调整了随机数")
+        except Exception as e:
+            print(f"  验证过程出错: {str(e)}")
+
+            # === 演示5的总结 ===
+    print("\n===== 演示5总结 =====")
+    print("1. 云服务器利用变色龙哈希的碰撞特性修改了模型参数")
+    print("2. 修改完成后，全局哈希值保持不变，常规验证仍然通过")
+    print("3. 客户端通过全面审计发现了被修改的参数")
+    print("4. 云服务器无法同时修改参数和保持随机数不变，这是审计的基础")
+    print("5. 尽管变色龙哈希允许碰撞，但结合客户端存储原始参数的审计机制，仍能检测任何修改")
 
     print("\n=== 安全验证演示完成 ===")
 

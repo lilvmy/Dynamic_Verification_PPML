@@ -22,10 +22,11 @@ def setup_he():
     HE.generate_relin_keys()
 
     secret_key = HE.get_secret_key()
+    rotate_key = HE.get_rotate_key()
     public_key = HE.get_public_key()
     relin_key = HE.get_relin_key()
 
-    return secret_key, public_key, relin_key
+    return secret_key, rotate_key, public_key, relin_key
 
 
 def load_HE_keys():
@@ -49,12 +50,16 @@ def load_HE_keys():
     HE.load_public_key(public_key)
 
     with open("../key_storage/secret.key", "rb") as f:
-        secret_key = f. read()
+        secret_key = f.read()
     HE.load_secret_key(secret_key)
 
     with open("../key_storage/relin.key", "rb") as f:
         relin_key = f.read()
     HE.load_relin_key(relin_key)
+
+    with open("../key_storage/rotate.key", "rb") as f:
+        rotate_key = f.read()
+    HE.load_rotate_key(rotate_key)
 
     return HE
 
@@ -94,6 +99,13 @@ def load_ecdsa_keys():
 
 
 if __name__ == "__main__":
+
+    # secret_key, rotate_key, public_key, relin_key = setup_he()
+    # print(f"the secret key is {secret_key}")
+    # print(f"the rotate key is {rotate_key}")
+    # print(f"the public key is {public_key}")
+    # print(f"the relin key is {relin_key}")
+
     # HE = load_HE_keys()
     # plaintext1 = [1.23, 2, 3]
     # plaintext2 = [2.23, 3, 4]
@@ -103,11 +115,13 @@ if __name__ == "__main__":
     # cipher = ciphertext1 + ciphertext2
     # decrypted_results1 = HE.decrypt_matrix(cipher)
     # print(f"the decrypted results is {decrypted_results1}")
-    # save_ecdsa_keys()
+    # # save_ecdsa_keys()
 
-    sk, vk = load_ecdsa_keys()
-    print(sk)
-    print(vk)
+    # sk, vk = load_ecdsa_keys()
+    # print(sk)
+    # print(vk)
+
+    setup_he()
 
 
 

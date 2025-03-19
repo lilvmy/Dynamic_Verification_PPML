@@ -38,7 +38,7 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$USER_HOME$/python_demo/Secure-DNN-Inference-with-Adversarial-training" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -46,8 +46,8 @@
       <recent name="$PROJECT_DIR$/pre-trained-model/model" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.encrypted_process_model">
-    <configuration name="CNN1ModelConstruction" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.model_verification_demo">
+    <configuration name="CHT_utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Results_Verification_PPML" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -55,12 +55,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pre-trained-model" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/dual_verification_tree" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pre-trained-model/CNN1ModelConstruction.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dual_verification_tree/CHT_utils.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -69,7 +69,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="CNN2ModelConstruction" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="build_CHT" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Results_Verification_PPML" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -77,12 +77,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pre-trained-model" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/dual_verification_tree" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pre-trained-model/CNN2ModelConstruction.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dual_verification_tree/build_CHT.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -91,7 +91,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="CNN4ModelConstruction" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="cht_merkle_construction_model_provider" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Results_Verification_PPML" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -99,12 +99,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/pre-trained-model" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/dual_verification_tree" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pre-trained-model/CNN4ModelConstruction.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dual_verification_tree/cht_merkle_construction_model_provider.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -135,7 +135,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="setup" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="model_verification_demo" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Results_Verification_PPML" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -143,12 +143,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/initialization" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/simulator_client_cloud" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/initialization/setup.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/simulator_client_cloud/model_verification_demo.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -159,11 +159,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.model_verification_demo" />
+        <item itemvalue="Python.build_CHT" />
+        <item itemvalue="Python.cht_merkle_construction_model_provider" />
+        <item itemvalue="Python.CHT_utils" />
         <item itemvalue="Python.encrypted_process_model" />
-        <item itemvalue="Python.setup" />
-        <item itemvalue="Python.CNN4ModelConstruction" />
-        <item itemvalue="Python.CNN1ModelConstruction" />
-        <item itemvalue="Python.CNN2ModelConstruction" />
       </list>
     </recent_temporary>
   </component>
@@ -201,7 +201,11 @@
       <workItem from="1742194130593" duration="757000" />
       <workItem from="1742194892310" duration="6954000" />
       <workItem from="1742201917321" duration="608000" />
-      <workItem from="1742202588682" duration="10001000" />
+      <workItem from="1742202588682" duration="11064000" />
+      <workItem from="1742261994714" duration="19668000" />
+      <workItem from="1742298250209" duration="880000" />
+      <workItem from="1742304358684" duration="22664000" />
+      <workItem from="1742375643038" duration="3247000" />
     </task>
     <servers />
   </component>
@@ -209,10 +213,14 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2933" y="442" width="524" height="514" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1742220764320">
+    <state x="3008" y="493" width="442" height="413" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1742281594507">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state x="2933" y="442" width="524" height="514" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742220764320" />
+    <state x="3008" y="493" width="442" height="413" key="#com.intellij.fileTypes.FileTypeChooser/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742281594507" />
+    <state x="2933" y="442" width="524" height="514" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1742367446690">
+      <screen x="1920" y="0" width="2560" height="1440" />
+    </state>
+    <state x="2933" y="442" width="524" height="514" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742367446690" />
     <state x="2983" y="454" width="424" height="491" key="FileChooserDialogImpl" timestamp="1741921229063">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
@@ -221,54 +229,54 @@
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state x="2992" y="580" width="712" height="506" key="Github.ShareDialog/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741585522971" />
-    <state width="2506" height="565" key="GridCell.Tab.0.bottom" timestamp="1742221642622">
+    <state width="2506" height="555" key="GridCell.Tab.0.bottom" timestamp="1742387834474">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state width="1866" height="265" key="GridCell.Tab.0.bottom/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
-    <state width="2506" height="565" key="GridCell.Tab.0.bottom/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742221642622" />
-    <state width="2506" height="565" key="GridCell.Tab.0.center" timestamp="1742221642622">
+    <state width="2506" height="555" key="GridCell.Tab.0.bottom/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387834474" />
+    <state width="2506" height="555" key="GridCell.Tab.0.center" timestamp="1742387834474">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state width="1866" height="265" key="GridCell.Tab.0.center/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
-    <state width="2506" height="565" key="GridCell.Tab.0.center/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742221642622" />
-    <state width="2506" height="565" key="GridCell.Tab.0.left" timestamp="1742221642622">
+    <state width="2506" height="555" key="GridCell.Tab.0.center/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387834474" />
+    <state width="2506" height="555" key="GridCell.Tab.0.left" timestamp="1742387834473">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state width="1866" height="265" key="GridCell.Tab.0.left/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
-    <state width="2506" height="565" key="GridCell.Tab.0.left/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742221642622" />
-    <state width="2506" height="565" key="GridCell.Tab.0.right" timestamp="1742221642622">
+    <state width="2506" height="555" key="GridCell.Tab.0.left/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387834473" />
+    <state width="2506" height="555" key="GridCell.Tab.0.right" timestamp="1742387834474">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state width="1866" height="265" key="GridCell.Tab.0.right/1920.0.2560.1440/0.0.1920.1032@0.0.1920.1032" timestamp="1741699075158" />
-    <state width="2506" height="565" key="GridCell.Tab.0.right/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742221642622" />
-    <state width="2506" height="477" key="GridCell.Tab.1.bottom" timestamp="1742201911191">
+    <state width="2506" height="555" key="GridCell.Tab.0.right/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387834474" />
+    <state width="2506" height="477" key="GridCell.Tab.1.bottom" timestamp="1742387429730">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="477" key="GridCell.Tab.1.bottom/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742201911191" />
-    <state width="2506" height="477" key="GridCell.Tab.1.center" timestamp="1742201911191">
+    <state width="2506" height="477" key="GridCell.Tab.1.bottom/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387429730" />
+    <state width="2506" height="477" key="GridCell.Tab.1.center" timestamp="1742387429729">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="477" key="GridCell.Tab.1.center/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742201911191" />
-    <state width="2506" height="477" key="GridCell.Tab.1.left" timestamp="1742201911191">
+    <state width="2506" height="477" key="GridCell.Tab.1.center/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387429729" />
+    <state width="2506" height="477" key="GridCell.Tab.1.left" timestamp="1742387429729">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="477" key="GridCell.Tab.1.left/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742201911191" />
-    <state width="2506" height="477" key="GridCell.Tab.1.right" timestamp="1742201911191">
+    <state width="2506" height="477" key="GridCell.Tab.1.left/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387429729" />
+    <state width="2506" height="477" key="GridCell.Tab.1.right" timestamp="1742387429730">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2506" height="477" key="GridCell.Tab.1.right/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742201911191" />
-    <state x="2681" y="331" width="1037" height="737" key="SettingsEditor" timestamp="1741589118710">
+    <state width="2506" height="477" key="GridCell.Tab.1.right/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742387429730" />
+    <state x="2681" y="331" width="1037" height="737" key="SettingsEditor" timestamp="1742298244203">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state x="2681" y="331" width="1037" height="737" key="SettingsEditor/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741589118710" />
-    <state width="1360" height="696" key="XDebugger.FullValuePopup" timestamp="1741945365313">
+    <state x="2681" y="331" width="1037" height="737" key="SettingsEditor/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742298244203" />
+    <state width="1360" height="696" key="XDebugger.FullValuePopup" timestamp="1742307118343">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="1360" height="696" key="XDebugger.FullValuePopup/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1741945365313" />
-    <state x="2838" y="523" key="com.intellij.ide.util.TipDialog" timestamp="1742202588396">
+    <state width="1360" height="696" key="XDebugger.FullValuePopup/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742307118343" />
+    <state x="2838" y="523" key="com.intellij.ide.util.TipDialog" timestamp="1742375643076">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state x="2838" y="523" key="com.intellij.ide.util.TipDialog/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742202588396" />
+    <state x="2838" y="523" key="com.intellij.ide.util.TipDialog/1920.0.2560.1440/0.0.1920.1032@1920.0.2560.1440" timestamp="1742375643076" />
     <state x="2728" y="364" width="933" height="671" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2" timestamp="1742178651001">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
@@ -286,19 +294,34 @@
           <line>167</line>
           <option name="timeStamp" value="2" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/dual_verification_tree/CHT_utils.py</url>
+          <line>220</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/simulator_client_cloud/model_verification_demo.py</url>
+          <line>336</line>
+          <option name="timeStamp" value="23" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$HE.coverage" NAME="HE Coverage Results" MODIFIED="1741835891618" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level_homomorphic_encryption" />
-    <SUITE FILE_PATH="coverage/Results_Verification_PPML$encrypted_process_model.coverage" NAME="encrypted_process_model Coverage Results" MODIFIED="1742221642618" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level_homomorphic_encryption" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$encrypted_process_model.coverage" NAME="encrypted_process_model Coverage Results" MODIFIED="1742307841475" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/level_homomorphic_encryption" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$model_verification_demo.coverage" NAME="model_verification_demo Coverage Results" MODIFIED="1742387785060" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/simulator_client_cloud" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$setup.coverage" NAME="setup Coverage Results" MODIFIED="1742197416985" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/initialization" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$build_cht_merkle_tree.coverage" NAME="build_CHT Coverage Results" MODIFIED="1742289815810" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/dual_verification_tree" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$add_method.coverage" NAME="add_method Coverage Results" MODIFIED="1741697395074" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/test" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$AlexnetModelConstruction.coverage" NAME="AlexnetModelConstruction Coverage Results" MODIFIED="1741765929516" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$CNN4ModelConstruction.coverage" NAME="CNN4ModelConstruction Coverage Results" MODIFIED="1742195454271" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$Lenet5ModelConstruction.coverage" NAME="Lenet5ModelConstruction Coverage Results" MODIFIED="1742194646851" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$CHT_utils.coverage" NAME="CHT_utils Coverage Results" MODIFIED="1742352347965" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/dual_verification_tree" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$CNN2ModelConstruction.coverage" NAME="CNN2ModelConstruction Coverage Results" MODIFIED="1742194680697" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$build_CHT.coverage" NAME="build_CHT Coverage Results" MODIFIED="1742374082829" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/dual_verification_tree" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$CNN3ModelContruction.coverage" NAME="CNN3ModelContruction Coverage Results" MODIFIED="1742194673688" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
+    <SUITE FILE_PATH="coverage/Results_Verification_PPML$cht_merkle_construction_model_provider.coverage" NAME="cht_merkle_construction_model_provider Coverage Results" MODIFIED="1742373669208" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/dual_verification_tree" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$LenetModelConstruction.coverage" NAME="LenetModelConstruction Coverage Results" MODIFIED="1742194575068" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$cht_construction.coverage" NAME="cht_construction Coverage Results" MODIFIED="1741942526069" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/chameleon_hash_tree" />
     <SUITE FILE_PATH="coverage/Results_Verification_PPML$CNN5ModelConstruction.coverage" NAME="CNN5ModelConstruction Coverage Results" MODIFIED="1742194655984" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pre-trained-model" />

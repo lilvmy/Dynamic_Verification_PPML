@@ -1,0 +1,3 @@
+cnn1:../level_homomorphic_encryption/model_hash_nodes/cnn1_model_params_hash_node.zpkl
+cnn2:../level_homomorphic_encryption/model_hash_nodes/cnn2_model_params_hash_node.zpkl
+cnn3:../level_homomorphic_encryption/model_hash_nodes/cnn3_model_params_hash_node.zpkl

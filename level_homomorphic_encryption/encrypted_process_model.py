@@ -9,32 +9,29 @@ import tempfile
 import sys
 import zlib
 import shutil
+import hashlib
 from initialization.setup import load_HE_keys
 
 
 def get_memory_usage():
-    """返回当前内存使用量（MB）"""
+    """
+    返回内存使用量(MB)
+    """
     process = psutil.Process(os.getpid())
     return process.memory_info().rss / (1024 * 1024)
 
 
 def binary_mean_representation(param):
     """
-    将参数转换为二值表示并计算平均值
-
-    Args:
-        param: 原始参数数组
-
-    Returns:
-        一个字典，包含二值化信息和平均值
+    将参数表示为二进制形式并计算均值
     """
-    # 二值化 (>0 为 1, 其他为 0)
+    # 二进制表示(>0为1，否则为0)
     binary = (param > 0).astype(np.float32)
 
-    # 计算二值化后的平均值
+    # 计算均值
     binary_mean = np.mean(binary)
 
-    # 计算原始正值和负值的平均值，用于重建参数
+    # 计算正值和负值的均值用于重建参数
     if np.any(param > 0):
         positive_mean = np.mean(param[param > 0])
     else:
@@ -53,26 +50,51 @@ def binary_mean_representation(param):
     }
 
 
-def encrypt_model_as_binary_means_dict(model_path, output_dir, compression_level=9):
+def extract_param_features(param, name):
     """
-    将模型参数转换为二值表示，计算平均值，加密并保存为字典结构的单个文件
+    提取参数的特征，确保不同参数有唯一标识
+    """
+    # 基本统计信息
+    features = {
+        'name': name,
+        'shape': param.shape,
+        'size': param.size,
+        'min': float(np.min(param)),
+        'max': float(np.max(param)),
+        'mean': float(np.mean(param)),
+        'std': float(np.std(param)),
+        'median': float(np.median(param)),
+        'sparsity': float(np.sum(param == 0) / param.size)
+    }
 
-    Args:
-        model_path: 模型参数路径
-        output_dir: 输出目录
-        compression_level: zlib压缩级别
+    # 添加分位数信息
+    percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99]
+    for p in percentiles:
+        features[f'percentile_{p}'] = float(np.percentile(param, p))
 
-    Returns:
-        输出文件路径
+        # 添加直方图特征
+    hist, bin_edges = np.histogram(param, bins=10)
+    features['histogram'] = hist.tolist()
+    features['histogram_bins'] = bin_edges.tolist()
+
+    # 添加前几个和最后几个元素的哈希（用于唯一性）
+    first_elements = param.flatten()[:20].tolist()
+    last_elements = param.flatten()[-20:].tolist()
+    features['sample_elements'] = first_elements + last_elements
+
+    return features
+
+
+def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
+    """
+    处理模型参数用于chameleon hash tree的叶子节点，确保每个模型参数有唯一标识
     """
     # 确保输出目录存在
     os.makedirs(output_dir, exist_ok=True)
 
-    # 加载加密密钥
     print("Loading HE keys...")
     HE = load_HE_keys()
 
-    # 加载模型
     print(f"Loading model from {model_path}...")
     with open(model_path, 'rb') as f:
         model = np.load(f, allow_pickle=True).item()
@@ -80,15 +102,27 @@ def encrypt_model_as_binary_means_dict(model_path, output_dir, compression_level
     param_names = list(model.keys())
     print(f"Found {len(param_names)} parameters")
 
-    # 创建结果字典 - 这将是我们最终保存的格式
-    encrypted_model = {}
+    # 构建处理后的模型参数字典
+    processed_model = {}
+
+    # 创建模型指纹用于全局标识
+    model_fingerprint = hashlib.sha256()
+    for name, param in model.items():
+        # 将参数的关键统计信息添加到模型指纹
+        param_info = f"{name}:{param.shape}:{np.mean(param)}:{np.std(param)}"
+        model_fingerprint.update(param_info.encode())
+
+        # 模型的全局唯一标识
+    model_id = model_fingerprint.hexdigest()
+    processed_model['__model_id__'] = model_id
+    print(f"Model ID: {model_id}")
 
     # 处理每个参数
     for name in param_names:
         print(f"Processing parameter: {name}")
         param = model[name]
 
-        # 获取二值表示及平均值
+        # 获取二进制均值信息
         binary_info = binary_mean_representation(param)
         binary_mean = binary_info['binary_mean']
 
@@ -97,110 +131,60 @@ def encrypt_model_as_binary_means_dict(model_path, output_dir, compression_level
         print(f"  Positive elements mean: {binary_info['positive_mean']:.4f}")
         print(f"  Negative elements mean: {binary_info['negative_mean']:.4f}")
 
-        # 加密二值平均值
+        # 提取参数特征
+        param_features = extract_param_features(param, name)
+
+        # 将特征转换为字节
+        feature_bytes = pickle.dumps(param_features)
+
+        # 将每个参数表示为二进制均值，并进行加密
         encrypted_mean = HE.encode_number(binary_mean)
+        encrypted_bytes = encrypted_mean.to_bytes()
 
-        # 将加密信息存储在结果字典中
-        encrypted_model[name] = encrypted_mean.to_bytes()
+        # 计算特征字节长度
+        feature_length = len(feature_bytes)
+        print(f"  Feature data size: {feature_length} bytes")
+        print(f"  Encrypted data size: {len(encrypted_bytes)} bytes")
 
-    # 获取模型名称
+        # 将特征和加密数据合并，前4字节存储特征长度
+        combined_data = feature_length.to_bytes(4, byteorder='big') + feature_bytes + encrypted_bytes
+
+        # 存储合并后的数据
+        processed_model[name] = combined_data
+
+        # 添加模型结构信息
+    model_structure = {name: str(param.shape) for name, param in model.items()}
+    processed_model['__model_structure__'] = pickle.dumps(model_structure)
+
     model_name = os.path.basename(model_path).replace('.npy', '')
-    output_file = os.path.join(output_dir, f"{model_name}_binary_means.enpy")
+    output_file = os.path.join(output_dir, f"{model_name}_hash_node.zpkl")
 
-    # 使用临时文件保存，然后移动到最终位置
+    # 使用临时文件保存，然后移动到输出文件路径
     temp_fd, temp_path = tempfile.mkstemp(suffix='.tmp')
     try:
         with os.fdopen(temp_fd, 'wb') as temp_f:
-            # 压缩并保存字典
-            compressed_data = zlib.compress(pickle.dumps(encrypted_model), level=compression_level)
+            # 压缩数据
+            compressed_data = zlib.compress(pickle.dumps(processed_model), level=compression_level)
             temp_f.write(compressed_data)
 
-        # 将临时文件移到最终位置
+            # 移动文件
         shutil.move(temp_path, output_file)
     except Exception as e:
-        # 确保出错时也删除临时文件
         if os.path.exists(temp_path):
             os.unlink(temp_path)
         raise e
 
-    # 获取文件大小
+        # 计算文件大小
     file_size_mb = os.path.getsize(output_file) / (1024 * 1024)
-    print(f"Encrypted model saved as dictionary. File size: {file_size_mb:.2f} MB")
+    print(f"Processed model saved for hash tree. File size: {file_size_mb:.2f} MB")
 
     return output_file
 
 
-def load_encrypted_model_dict(encrypted_file_path):
-    """
-    加载保存为字典结构的加密模型
-
-    Args:
-        encrypted_file_path: 加密模型文件路径
-
-    Returns:
-        加载的模型字典
-    """
-    # 读取加密文件
-    with open(encrypted_file_path, 'rb') as f:
-        compressed_data = f.read()
-
-    # 解压缩并返回字典
-    return pickle.loads(zlib.decompress(compressed_data))
-
-
-def decrypt_binary_mean_model_dict(encrypted_model_dict):
-    """
-    解密和重建基于字典结构的二值化平均值模型
-
-    Args:
-        encrypted_model_dict: 加密模型字典
-
-    Returns:
-        解密后的模型参数字典
-    """
-    # 加载密钥
-    HE = load_HE_keys()
-
-    # 解密并重建参数
-    decrypted_model = {}
-
-    for name, param_data in encrypted_model_dict.items():
-        # 解密平均值
-        encrypted_mean = HE.from_bytes(param_data['encrypted_mean'])
-        binary_mean = HE.decode_number(encrypted_mean)
-
-        # 获取参数形状和重建值
-        shape = param_data['shape']
-        positive_mean = param_data['positive_mean']
-        negative_mean = param_data['negative_mean']
-
-        # 使用二值平均值重建二值掩码
-        # 这只是一个近似，无法精确重建原始的二值表示
-        total_elements = np.prod(shape)
-        ones_count = int(binary_mean * total_elements + 0.5)  # 四舍五入
-
-        # 创建扁平化的二值掩码
-        binary_flat = np.zeros(total_elements, dtype=np.float32)
-        binary_flat[:ones_count] = 1.0
-
-        # 随机排列以避免所有1都在前面
-        np.random.shuffle(binary_flat)
-
-        # 重塑为原始形状
-        binary = binary_flat.reshape(shape)
-
-        # 根据二值掩码和正/负平均值重建参数
-        reconstructed = np.where(binary > 0.5, positive_mean, negative_mean).astype(np.float32)
-
-        decrypted_model[name] = reconstructed
-
-        print(f"  Decrypted {name}: shape {shape}, binary mean {binary_mean:.4f}")
-
-    return decrypted_model
-
-
 def cleanup_temp_files():
-    """清理所有临时文件"""
+    """
+    清理所有临时文件
+    """
     temp_dir = tempfile.gettempdir()
     for filename in os.listdir(temp_dir):
         filepath = os.path.join(temp_dir, filename)
@@ -210,6 +194,62 @@ def cleanup_temp_files():
             except Exception:
                 pass
     gc.collect()
+
+
+def verify_hash_node_files(output_dir):
+    """
+    验证生成的哈希节点文件是否具有唯一性
+    """
+    print("\n=== Verifying Hash Node Files ===")
+    file_paths = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.endswith('_hash_node.zpkl')]
+
+    model_ids = {}
+    param_hashes = {}
+
+    for file_path in file_paths:
+        model_name = os.path.basename(file_path).replace('_hash_node.zpkl', '')
+
+        try:
+            with open(file_path, 'rb') as f:
+                compressed_data = f.read()
+                model_data = pickle.loads(zlib.decompress(compressed_data))
+
+                # 检查模型ID唯一性
+            model_id = model_data.get('__model_id__', 'unknown')
+            if model_id in model_ids:
+                print(f"WARNING: Model ID collision between {model_name} and {model_ids[model_id]}")
+            else:
+                model_ids[model_id] = model_name
+
+                # 检查参数唯一性
+            for param_name, param_data in model_data.items():
+                if param_name.startswith('__'):  # 跳过元数据
+                    continue
+
+                    # 提取参数特征
+                try:
+                    feature_length = int.from_bytes(param_data[:4], byteorder='big')
+                    feature_bytes = param_data[4:4 + feature_length]
+                    param_features = pickle.loads(feature_bytes)
+
+                    # 创建参数特征哈希
+                    param_hash = hashlib.md5(feature_bytes).hexdigest()
+                    param_key = f"{param_name}:{param_hash[:8]}"
+
+                    if param_key in param_hashes:
+                        print(f"  Parameter similarity: {model_name}.{param_name} ~ {param_hashes[param_key]}")
+                    else:
+                        param_hashes[param_key] = f"{model_name}.{param_name}"
+
+                except Exception as e:
+                    print(f"  Error processing {model_name}.{param_name}: {e}")
+
+            print(f"Verified {model_name}: Model ID {model_id[:8]}..., {len(model_data) - 2} parameters")
+
+        except Exception as e:
+            print(f"Error verifying {model_name}: {e}")
+
+    print(f"Found {len(model_ids)} unique model IDs across {len(file_paths)} files")
 
 
 def main():
@@ -223,8 +263,8 @@ def main():
         "cnn5_model_params.npy"
     ]
 
-    # 创建输出目录
-    output_dir = "./encrypted_model_params_binary"
+    # 建立输出文件路径
+    output_dir = "./model_hash_nodes"
     os.makedirs(output_dir, exist_ok=True)
 
     results = {}
@@ -239,14 +279,12 @@ def main():
             continue
 
         try:
-            # 加密并保存模型为字典结构
-            output_file = encrypt_model_as_binary_means_dict(
+            output_file = process_model_for_hash_tree(
                 model_path,
                 output_dir,
                 compression_level=9
             )
 
-            # 记录结果
             file_size_mb = os.path.getsize(output_file) / (1024 * 1024)
             results[model_name] = {
                 'status': 'success',
@@ -261,16 +299,15 @@ def main():
                 'error': str(e)
             }
 
-        # 释放内存并清理临时文件
         cleanup_temp_files()
         gc.collect()
 
-    # 打印结果摘要
+        # 打印结果摘要
     print("\n=== Processing Summary ===")
     for model, result in results.items():
         status = result['status']
         if status == 'success':
-            print(f"{model}: Successfully encrypted as dictionary")
+            print(f"{model}: Successfully processed for hash tree")
             print(f"  Output file: {result['output_file']}")
             print(f"  File size: {result['file_size_mb']:.2f} MB")
         elif status == 'failed':
@@ -278,32 +315,99 @@ def main():
         else:
             print(f"{model}: Not found")
 
+            # 验证生成的哈希节点文件
+    verify_hash_node_files(output_dir)
+
     print("\nAll models have been processed!")
 
+
+def extract_data_from_hash_node(file_path, param_name=None, include_identifier=True):
+    """
+    从哈希节点文件中提取参数的加密数据
+
+    参数:
+        file_path: 哈希节点文件路径
+        param_name: 指定的参数名，如果为None则返回所有参数的加密数据
+        include_identifier: 是否在加密数据中包含唯一标识符（默认True）
+
+    返回:
+        如果param_name指定: 返回单个参数的特征和加密数据
+        如果param_name为None: 返回所有参数的加密数据字典，每个加密数据包含唯一标识
+    """
+    with open(file_path, 'rb') as f:
+        compressed_data = f.read()
+        model_data = pickle.loads(zlib.decompress(compressed_data))
+
+        # 如果指定了参数名，只返回该参数的数据
+    if param_name is not None:
+        if param_name not in model_data:
+            print(f"Parameter {param_name} not found in {file_path}")
+            return None
+
+        param_data = model_data[param_name]
+
+        # 提取特征和加密数据
+        feature_length = int.from_bytes(param_data[:4], byteorder='big')
+        feature_bytes = param_data[4:4 + feature_length]
+        encrypted_bytes = param_data[4 + feature_length:]
+
+        features = pickle.loads(feature_bytes)
+
+        # 如果需要包含标识符（用于chameleon hash），将部分特征哈希添加到加密数据
+        if include_identifier:
+            # 创建唯一标识
+            param_id = hashlib.sha256(feature_bytes).digest()[:16]  # 使用16字节标识
+            encrypted_bytes = param_id + encrypted_bytes
+
+        return {
+            'features': features,
+            'encrypted_bytes': encrypted_bytes
+        }
+
+        # 如果没有指定参数名，返回所有参数的加密数据
+    else:
+        result = {}
+        # 获取模型ID作为额外标识
+        model_id = model_data.get('__model_id__', b'').encode()[:8]
+
+        for key, param_data in model_data.items():
+            # 跳过元数据字段
+            if key.startswith('__'):
+                continue
+
+            try:
+                # 提取加密数据和特征
+                feature_length = int.from_bytes(param_data[:4], byteorder='big')
+                feature_bytes = param_data[4:4 + feature_length]
+                encrypted_bytes = param_data[4 + feature_length:]
+
+                # 如果需要包含唯一标识，将参数特征哈希添加到加密数据
+                if include_identifier:
+                    # 为参数创建唯一标识（使用参数名和特征的哈希）
+                    key_bytes = key.encode()
+                    param_hash = hashlib.sha256(key_bytes + feature_bytes).digest()[:16]
+
+                    # # 组合模型ID、参数ID和加密数据
+                    # unique_bytes = model_id + param_hash + encrypted_bytes
+                    unique_bytes = param_hash
+                    result[key] = unique_bytes
+                else:
+                    # 仅返回加密数据
+                    result[key] = encrypted_bytes
+
+            except Exception as e:
+                print(f"Error extracting data for parameter {key}: {e}")
+                result[key] = None
+
+        return result
 
 if __name__ == "__main__":
     # try:
     #     main()
     # finally:
-    #     # 确保在程序结束时清理所有临时文件
     #     cleanup_temp_files()
 
+    all_encrypted_data = extract_data_from_hash_node("./model_hash_nodes/cnn1_model_params_hash_node.zpkl")
+    print(all_encrypted_data)
 
-    # # 调试代码
-    # 获取加密参数
-    loaded_data = load_encrypted_model_dict("./encrypted_model_params_binary/lenet1_model_params_binary_means.enpy")
 
-    # 打印键值信息
-    print(f"\n字典中的键数量: {len(loaded_data)}")
-    for i, (key, value) in enumerate(loaded_data.items()):
-        print(f"键: {key}")
-
-        if isinstance(value, bytes):
-            print(f"值类型: bytes (长度: {len(value)} 字节)")
-            # 只显示前50个字符的十六进制表示
-            hex_preview = value.hex()[:100]
-            print(f"十六进制预览: {hex_preview}..." if len(value.hex()) > 100 else f"十六进制: {hex_preview}")
-        elif isinstance(value, dict):
-            print(f"值类型: 嵌套字典，包含键: {list(value.keys())}")
-        else:
-            print(f"值类型: {type(value)}")

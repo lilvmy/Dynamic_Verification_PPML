@@ -171,14 +171,14 @@ def testing(test_loader, device, model):
             correct += (predicted == labels).sum().item()
 
 
-        print('RealNumber: Accuracy of the network on the 10000 test images: {} %'.format(100 * correct / total))
+        print('RealNumber: Accuracy of the network on the 10000 experiments images: {} %'.format(100 * correct / total))
 
     return correct / total
 
 
 def main():
     """
-    Main function to set up, train, and test the Alexnet model in both original and fixed-point representation settings.
+    Main function to set up, train, and experiments the Alexnet model in both original and fixed-point representation settings.
     """
     batch_size, num_classes, learning_rate, num_epochs, device = setVariables()
 
@@ -199,8 +199,19 @@ def main():
     torch.save(model.state_dict(), "./model/Alexnet_model.pt")
 
 if __name__ == "__main__":
-    setup_logging()
-    main()
+    # setup_logging()
+    # main()
+
+    model = torch.load("/home/lilvmy/paper-demo/Results_Verification_PPML/pre-trained-model/model/Alexnet_model.pt", weights_only=True)
+    model_params = {}
+    for name, param in model.items():
+        model_params[name] = param.cpu().numpy()
+
+    np.save("./model/alexnet_model_params.npy", model_params)
+
+    load_params = np.load("./model/alexnet_model_params.npy", allow_pickle=True).item()
+
+    print(load_params)
 
 
 

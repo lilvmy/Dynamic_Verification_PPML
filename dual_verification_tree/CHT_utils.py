@@ -71,18 +71,18 @@ class ChameleonHash:
             if q % 2 == 0:
                 q += 1
 
-                # judge q is prime based on Miller-Rabin test
+                # judge q is prime based on Miller-Rabin experiments
             if ChameleonHash.is_probable_prime(q, ChameleonHash.CERTAINTY):
                 #
                 p = 2 * q + 1
-                # test p is prime
+                # experiments p is prime
                 if ChameleonHash.is_probable_prime(p, ChameleonHash.CERTAINTY):
                     return p
 
     @staticmethod
     def is_probable_prime(n: int, k: int) -> bool:
         """
-        realize Miller-Rabin test
+        realize Miller-Rabin experiments
         """
         if n <= 1:
             return False
@@ -97,7 +97,7 @@ class ChameleonHash:
             d //= 2
             r += 1
 
-            # k round Miller-Rabin test
+            # k round Miller-Rabin experiments
         for _ in range(k):
             a = random.randint(2, n - 2)
             x = pow(a, d, n)

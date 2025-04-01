@@ -1,0 +1,95 @@
+{
+  "timestamp": 1743491516,
+  "version": 1,
+  "root_hash": "3800618b4d2408d976007ac63ef10218e14e365f2964eb5f311af37abc79023e",
+  "encrypted_root_hash": "173e7c9c4093af6944b88afd7aaf8c115286e14834273304ea4dd8232a89abf7b6755f2ec08842a0ae5e13b67db55cab74d3c18860ff4c9a9128b6b24b7035274acd86960731317271e72c1057f66020e753fe387c2c0cc60f8e3f33605f71d79b2dd3f2802ec3ca4ca8c7f2cd76188192cfa90f51c0d54be97dcbd683b171f0312c37959c5aef6ad6e53b9c64159a62fb5f80007d831cdac8bf0419e126ff1a11d886dd4bc5fe440a4cb5e55154e75b620d1f1f24b1e679a0cc66620055c8060b1b7ea5f8d1f12ed54ec2439e637f52c949887899734f8f8d6bf2d7530abba0d9fb184f90c310dc1ca71283f6c2eaf82d98a205bbc43c37da7393fa94d0f815",
+  "performance_stats": {
+    "build": {
+      "total_blocks": 261225,
+      "build_time_sec": 1.309746503829956,
+      "memory_used_mb": 321.1171875,
+      "tree_size_mb": 210.88102340698242
+    }
+  },
+  "param_blocks_count": {
+    "cnn1": {
+      "cnn1.0.weight": 576,
+      "cnn1.0.bias": 64,
+      "cnn1.4.weight": 16384,
+      "cnn1.4.bias": 16,
+      "cnn1.5.weight": 160,
+      "cnn1.5.bias": 10
+    },
+    "cnn2": {
+      "cnn2.0.weight": 576,
+      "cnn2.0.bias": 64,
+      "cnn2.4.weight": 17348,
+      "cnn2.4.bias": 32,
+      "cnn2.5.weight": 320,
+      "cnn2.5.bias": 10
+    },
+    "cnn3": {
+      "cnn3.0.weight": 2304,
+      "cnn3.0.bias": 256,
+      "cnn3.4.weight": 17750,
+      "cnn3.4.bias": 16,
+      "cnn3.5.weight": 160,
+      "cnn3.5.bias": 10
+    },
+    "cnn4": {
+      "cnn4.0.weight": 2304,
+      "cnn4.0.bias": 256,
+      "cnn4.4.weight": 17980,
+      "cnn4.4.bias": 32,
+      "cnn4.5.weight": 320,
+      "cnn4.5.bias": 10
+    },
+    "cnn5": {
+      "cnn5.0.weight": 2304,
+      "cnn5.0.bias": 256,
+      "cnn5.4.weight": 17980,
+      "cnn5.4.bias": 64,
+      "cnn5.5.weight": 640,
+      "cnn5.5.bias": 10
+    },
+    "lenet1": {
+      "lenet1.0.weight": 100,
+      "lenet1.0.bias": 4,
+      "lenet1.3.weight": 1200,
+      "lenet1.3.bias": 12,
+      "lenet1.7.weight": 1920,
+      "lenet1.7.bias": 10
+    },
+    "lenet5": {
+      "lenet5.0.weight": 150,
+      "lenet5.0.bias": 6,
+      "lenet5.3.weight": 2400,
+      "lenet5.3.bias": 16,
+      "lenet5.7.weight": 16000,
+      "lenet5.7.bias": 120,
+      "lenet5.8.weight": 10080,
+      "lenet5.8.bias": 84,
+      "lenet5.9.weight": 840,
+      "lenet5.9.bias": 10
+    },
+    "alexnet": {
+      "alexnet.0.weight": 1728,
+      "alexnet.0.bias": 64,
+      "alexnet.3.weight": 15799,
+      "alexnet.3.bias": 192,
+      "alexnet.6.weight": 17934,
+      "alexnet.6.bias": 384,
+      "alexnet.8.weight": 17695,
+      "alexnet.8.bias": 256,
+      "alexnet.10.weight": 17874,
+      "alexnet.10.bias": 256,
+      "alexnet.15.weight": 18002,
+      "alexnet.15.bias": 4096,
+      "alexnet.18.weight": 18021,
+      "alexnet.18.bias": 4096,
+      "alexnet.20.weight": 13654,
+      "alexnet.20.bias": 10
+    }
+  },
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArUfVbgaLhrZjagGlf8lG\nzOgiaMTxVvqagCJzCJKbZj1+n3s+5Rd0CYdD6+wQbum6lDI4VzbdHeY50vUA9rMZ\npiN5U++RL/o/rsUNtG4K+ai5R4Iyg7Rp8eUvFcSFi1vtJszzMk3KWoJsGoo+l+VX\nO/jzdbUwphTQ0qoIzHQ4MpGnZDmAbnLFXGIlyMx6pAarQyyuCaPO1WFOHAxIc2T4\nYSI7IRW0vqwIe9tJ7oZnNqFWh7kc8VYCjs8rTZURiOK8e3rcqCkLQBssHw+n/pHN\nj3sSPP5U4z7wiZKjJTloW2IhqVmspevH4T7bqm5FIkao35Sj9MFmkhdNSQwT03Jw\nLQIDAQAB\n-----END PUBLIC KEY-----\n"
+}

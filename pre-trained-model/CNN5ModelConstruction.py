@@ -131,14 +131,14 @@ def testing(test_loader, device, model):
             correct += (predicted == labels).sum().item()
 
 
-        print('RealNumber: Accuracy of the network on the 10000 test images: {} %'.format(100 * correct / total))
+        print('RealNumber: Accuracy of the network on the 10000 experiments images: {} %'.format(100 * correct / total))
 
     return correct / total
 
 
 def main():
     """
-    Main function to set up, train, and test the CNN5 model in both original and fixed-point representation settings.
+    Main function to set up, train, and experiments the CNN5 model in both original and fixed-point representation settings.
     """
     batch_size, num_classes, learning_rate, num_epochs, device = setVariables()
 

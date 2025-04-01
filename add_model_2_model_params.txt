@@ -1,0 +1,5 @@
+xcnn1:../pre-trained-model/model/xcnn1_model_params.npy
+xcnn2:../pre-trained-model/model/xcnn2_model_params.npy
+xcnn3:../pre-trained-model/model/xcnn3_model_params.npy
+xcnn4:../pre-trained-model/model/xcnn4_model_params.npy
+xcnn5:../pre-trained-model/model/xcnn5_model_params.npy

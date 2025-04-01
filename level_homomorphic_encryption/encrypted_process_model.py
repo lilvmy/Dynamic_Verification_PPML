@@ -112,7 +112,7 @@ def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
         param_info = f"{name}:{param.shape}:{np.mean(param)}:{np.std(param)}"
         model_fingerprint.update(param_info.encode())
 
-        # 模型的全局唯一标识
+    # 模型的全局唯一标识
     model_id = model_fingerprint.hexdigest()
     processed_model['__model_id__'] = model_id
     print(f"Model ID: {model_id}")
@@ -152,7 +152,7 @@ def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
         # 存储合并后的数据
         processed_model[name] = combined_data
 
-        # 添加模型结构信息
+    # 添加模型结构信息
     model_structure = {name: str(param.shape) for name, param in model.items()}
     processed_model['__model_structure__'] = pickle.dumps(model_structure)
 
@@ -178,7 +178,7 @@ def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
     file_size_mb = os.path.getsize(output_file) / (1024 * 1024)
     print(f"Processed model saved for hash tree. File size: {file_size_mb:.2f} MB")
 
-    return output_file
+    return output_file, processed_model
 
 
 def cleanup_temp_files():
@@ -279,7 +279,7 @@ def main():
             continue
 
         try:
-            output_file = process_model_for_hash_tree(
+            output_file, combined_data = process_model_for_hash_tree(
                 model_path,
                 output_dir,
                 compression_level=9
@@ -338,7 +338,7 @@ def extract_data_from_hash_node(file_path, param_name=None, include_identifier=T
         compressed_data = f.read()
         model_data = pickle.loads(zlib.decompress(compressed_data))
 
-        # 如果指定了参数名，只返回该参数的数据
+    # 如果指定了参数名，只返回该参数的数据
     if param_name is not None:
         if param_name not in model_data:
             print(f"Parameter {param_name} not found in {file_path}")
@@ -407,7 +407,7 @@ if __name__ == "__main__":
     # finally:
     #     cleanup_temp_files()
 
-    all_encrypted_data = extract_data_from_hash_node("./model_hash_nodes/cnn1_model_params_hash_node.zpkl")
+    all_encrypted_data = extract_data_from_hash_node("./model_hash_nodes/lenet1_model_params_hash_node.zpkl")
     print(all_encrypted_data)
 
 

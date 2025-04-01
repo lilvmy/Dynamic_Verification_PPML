@@ -1,9 +1,6 @@
 import hashlib
-import random
 import time
-import base64
 from typing import List, Dict, Tuple, Any, Optional
-import secrets
 import ecdsa  # ecdsa lib
 from initialization.setup import load_ecdsa_keys
 from dual_verification_tree.CHT_utils import ChameleonHash, load_cht_keys
@@ -12,7 +9,10 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import os
 import pickle
-
+import sys
+import numpy as np
+import copy
+import traceback
 
 class PublicKeySet:
     """
@@ -69,7 +69,46 @@ class CHTNode:
         self.is_leaf = False  # is whether leaf node
         self.data = None  # cite of leaf node data
 
-# ====================== CHT ======================
+    def size_in_bytes(self):
+        """计算CHTNode节点的内存占用（字节）"""
+        # 基本对象开销
+        size = sys.getsizeof(self)
+
+        # 计算hash_value的大小
+        if self.hash_value is not None:
+            size += sys.getsizeof(self.hash_value)
+
+            # 计算rho的大小
+        if self.rho is not None:
+            size += sys.getsizeof(self.rho)
+
+            # 计算delta的大小
+        if self.delta is not None:
+            size += sys.getsizeof(self.delta)
+
+        # 注意：我们不计算left, right和parent的大小
+        # 因为这些是对其他节点的引用，计算它们会导致重复计算
+        # 只计算引用本身的大小
+        size += sys.getsizeof(self.left)
+        size += sys.getsizeof(self.right)
+        size += sys.getsizeof(self.parent)
+
+        # 计算is_leaf的大小
+        size += sys.getsizeof(self.is_leaf)
+
+        # 计算data的大小
+        if self.data is not None:
+            if isinstance(self.data, np.ndarray):
+                size += self.data.nbytes
+            elif hasattr(self.data, 'size_in_bytes') and callable(getattr(self.data, 'size_in_bytes')):
+                # 如果data对象自己有size_in_bytes方法
+                size += self.data.size_in_bytes()
+            else:
+                size += sys.getsizeof(self.data)
+
+        return size
+
+    # ====================== CHT ======================
 class ChameleonHashTree:
     """CHT based on discrete log"""
 
@@ -88,6 +127,77 @@ class ChameleonHashTree:
         self.version = None
         self.node_count = 0
 
+    def calculate_storage_size(self, include_values=True):
+        """
+        计算整个CHT树的存储大小（字节）
+
+        参数:
+            include_values (bool): 是否包括节点中的数据值(hash_value, rho, delta, data)在计算中
+
+        返回:
+            int: 存储大小（字节）
+        """
+        if self.root is None:
+            return 0
+
+            # 使用集合来跟踪已访问的节点，避免重复计算
+        visited = set()
+        total_size = 0
+
+        # 使用栈进行遍历，避免递归导致的栈溢出
+        stack = [self.root]
+
+        while stack:
+            node = stack.pop()
+
+            # 如果节点已访问，跳过
+            if id(node) in visited:
+                continue
+
+                # 标记为已访问
+            visited.add(id(node))
+
+            # 计算当前节点大小
+            if include_values:
+                # 计算对象基本大小
+                node_size = sys.getsizeof(node)
+
+                # 计算各属性大小
+                if node.hash_value is not None:
+                    node_size += sys.getsizeof(node.hash_value)
+
+                if node.rho is not None:
+                    node_size += sys.getsizeof(node.rho)
+
+                if node.delta is not None:
+                    node_size += sys.getsizeof(node.delta)
+
+                    # is_leaf 布尔值的大小已包含在对象基本大小中
+
+                # 计算data的大小
+                if node.data is not None:
+                    if isinstance(node.data, np.ndarray):
+                        node_size += node.data.nbytes
+                    elif hasattr(node.data, 'size_in_bytes') and callable(getattr(node.data, 'size_in_bytes')):
+                        # 如果data有size_in_bytes方法
+                        node_size += node.data.size_in_bytes()
+                    else:
+                        node_size += sys.getsizeof(node.data)
+            else:
+                # 只计算节点结构的开销，不包括值
+                node_size = sys.getsizeof(node)
+
+                # 累加到总大小
+            total_size += node_size
+
+            # 将子节点添加到栈中
+            if node.left is not None:
+                stack.append(node.left)
+            if node.right is not None:
+                stack.append(node.right)
+
+        return total_size
+
     def _generate_node_name(self, node_type="internal", model_id=None, param_id=None):
         """生成唯一的节点名称用于可视化"""
         self.node_count += 1
@@ -100,8 +210,7 @@ class ChameleonHashTree:
         else:
             return f"N{self.node_count}"
 
-    def build_from_model_params(self, all_model_params: Dict[str, Dict[str, bytes]],
-                                signing_key: ecdsa.SigningKey) -> CHTNode:
+    def build_from_model_params(self, all_model_params: Dict[str, Dict[str, bytes]],signing_key: ecdsa.SigningKey) -> CHTNode:
         """
         build CHT from model parameters
         """
@@ -293,36 +402,302 @@ class ChameleonHashTree:
             'signature': self.signature
         }
 
-    def update_param(self, model_id_str: str, param_id_str: str, new_data: bytes) -> bool:
+    def update_model_or_params(self,model_to_add: Dict[str, Dict[str, bytes]] = None,model_id_to_delete: str = None,param_modifications: Dict[str, Dict[str, bytes]] = None) -> CHTNode:
+        """更新模型或参数（增加模型、删除模型、修改参数）并维持CHT完整性
+
+        Args:
+            model_to_add: 要添加的新模型 {model_id: {param_id: data, ...}}
+            model_id_to_delete: 要删除的模型ID
+            param_modifications: 要修改的参数 {model_id: {param_id: new_data, ...}}
+
+        Returns:
+            更新后的树根节点
         """
-        update model param and retain integrity of CHT
-        """
-        if model_id_str not in self.model_params or param_id_str not in self.model_params[model_id_str]:
-            return False
+        # 跟踪修改的路径
+        modified_paths = []
 
-        leaf_node = self.model_params[model_id_str][param_id_str]
-        old_data = leaf_node.data
-        old_hash = leaf_node.hash_value
+        # 1. 处理删除整个模型
+        if model_id_to_delete:
+            if model_id_to_delete not in self.model_trees:
+                print(f"模型 {model_id_to_delete} 不存在，无法删除")
+            else:
+                try:
+                    # 获取要删除的模型子树根节点
+                    model_root = self.model_trees[model_id_to_delete]
 
-        new_encoded_data = self._encode_param(model_id_str, param_id_str, new_data)
+                    # 我们不能实际从树中删除节点，但可以用空模型替换它
+                    # 创建一个包含单个空参数的空模型
+                    empty_param_id = "_empty_"
+                    empty_param_data = b''
 
-        pre_image = ChameleonHash.forge(old_hash, new_encoded_data, self.keys)
+                    # 创建空模型的叶节点
+                    node = CHTNode()
+                    node.is_leaf = True
+                    node.data = empty_param_data
+                    node.param_id = empty_param_id  # 为可视化添加参数ID
 
-        # update leaf node
-        leaf_node.data = new_data
-        leaf_node.rho = pre_image.rho
-        leaf_node.delta = pre_image.delta
+                    # 编码参数信息
+                    encoded_data = self._encode_param(model_id_to_delete, empty_param_id, empty_param_data)
 
-        # verify hash value
-        new_hash = ChameleonHash.hash(new_encoded_data, pre_image.rho, pre_image.delta, self.public_keys)
-        if new_hash != old_hash:
-            leaf_node.data = old_data
-            return False
+                    # 生成随机数
+                    node.rho = ChameleonHash.get_random_in_range(self.keys.get_q())
+                    node.delta = ChameleonHash.get_random_in_range(self.keys.get_q())
 
-        print(f"param(model{model_id_str}param{param_id_str})update successfully, the hash value is stable")
-        return True
+                    # 计算叶节点哈希
+                    node.hash_value = ChameleonHash.hash(encoded_data, node.rho, node.delta, self.public_keys)
+
+                    # 这个单一节点现在代表整个被删除的模型
+                    new_model_root = node
+                    new_model_root.model_id = model_id_to_delete[0:4]  # 为可视化添加模型ID
+
+                    # 更新从模型根到全局根的路径
+                    current_node = model_root
+                    new_node = new_model_root
+
+                    # 保存修改路径信息
+                    path = []
+
+                    # 递归地向上更新父节点，直到到达全局根
+                    while current_node.parent is not None:
+                        parent = current_node.parent
+
+                        # 记录修改路径
+                        parent_hash_before = parent.hash_value
+
+                        # 确定当前节点是左节点还是右节点
+                        is_left = current_node == parent.left
+
+                        # 获取兄弟节点
+                        sibling = parent.right if is_left else parent.left
+
+                        # 创建新的编码数据（左右子节点的哈希连接）
+                        if is_left:
+                            combined_data = new_node.hash_value + sibling.hash_value
+                        else:
+                            combined_data = sibling.hash_value + new_node.hash_value
+
+                            # 寻找新数据的哈希碰撞
+                        pre_image = ChameleonHash.forge(parent.hash_value, combined_data, self.keys)
+
+                        # 如果是左节点，更新父节点的左子节点，否则更新右子节点
+                        if is_left:
+                            parent.left = new_node
+                        else:
+                            parent.right = new_node
+
+                        new_node.parent = parent
+
+                        # 更新父节点的rho和delta
+                        parent.rho = pre_image.rho
+                        parent.delta = pre_image.delta
+
+                        # 验证哈希值保持不变
+                        new_hash = ChameleonHash.hash(combined_data, pre_image.rho, pre_image.delta, self.public_keys)
+                        if new_hash != parent.hash_value:
+                            raise Exception("更新树结构时哈希碰撞验证失败")
+
+                            # 记录节点修改前后的信息
+                        path.append({
+                            'node_level': 'internal',
+                            'original_hash': parent_hash_before.hex(),
+                            'new_hash': parent.hash_value.hex(),
+                            'position': 'left' if is_left else 'right',
+                            'rho': pre_image.rho,
+                            'delta': pre_image.delta
+                        })
+
+                        # 移动到上一级继续处理
+                        current_node = parent
+                        new_node = parent
+
+                        # 更新模型映射
+                    # 创建新的空参数映射
+                    empty_params = {empty_param_id: node}
+
+                    # 更新模型树和参数映射
+                    self.model_trees[model_id_to_delete] = new_model_root
+                    self.model_params[model_id_to_delete] = empty_params
 
 
+                    print(f"模型 {model_id_to_delete} 已成功标记为删除，保持全局树结构不变")
+
+                except Exception as e:
+                    print(f"删除模型 {model_id_to_delete} 失败: {str(e)}")
+
+        # 2. 处理修改模型参数
+        if param_modifications:
+            # 首先更新叶子节点的数据
+            modified_model_ids = set()
+            for model_id, params in param_modifications.items():
+                if model_id not in self.model_params:
+                    for param_id in params:
+                        print(f"修改参数失败: 模型 {model_id} 不存在")
+                    continue
+
+                model_params = self.model_params[model_id]
+                model_modified = False
+
+                for param_id, new_data in params.items():
+                    if param_id not in model_params:
+                        print(f"修改参数失败: 参数 {param_id} 不存在于模型 {model_id} 中")
+                        continue
+
+                    try:
+                        # 更新叶子节点数据
+                        leaf_node = model_params[param_id]
+                        leaf_node.data = new_data
+                        model_modified = True
+                        print(f"参数(模型{model_id}参数{param_id})数据已更新，准备重建树")
+
+                    except Exception as e:
+                        print(f"修改参数(模型{model_id}参数{param_id})失败: {str(e)}")
+
+                        # 如果模型有修改，记录下来
+                if model_modified:
+                    modified_model_ids.add(model_id)
+
+                    # 开始重建树
+            print(f"开始重建树结构，涉及 {len(modified_model_ids)} 个修改的模型...")
+
+            try:
+                # 重建所有修改过的模型子树
+                for model_id in modified_model_ids:
+                    model_params_dict = {}
+                    # 收集模型的所有参数
+                    for param_id, leaf_node in self.model_params[model_id].items():
+                        model_params_dict[param_id] = leaf_node.data
+
+                        # 清除旧的模型子树
+                    old_model_root = self.model_trees[model_id]
+
+                    # 为修改后的模型创建新的叶子节点和子树
+                    leaf_nodes = []
+                    param_map = {}
+
+                    for param_id_str in model_params_dict.keys():
+                        node = CHTNode()
+                        node.is_leaf = True
+                        node.data = model_params_dict[param_id_str]
+                        node.param_id = param_id_str
+
+                        # 编码参数数据
+                        encoded_data = self._encode_param(model_id, param_id_str, model_params_dict[param_id_str])
+
+                        # 生成新的哈希参数
+                        node.rho = ChameleonHash.get_random_in_range(self.keys.get_q())
+                        node.delta = ChameleonHash.get_random_in_range(self.keys.get_q())
+
+                        # 计算新的哈希值
+                        node.hash_value = ChameleonHash.hash(encoded_data, node.rho, node.delta, self.public_keys)
+
+                        leaf_nodes.append(node)
+                        param_map[param_id_str] = node
+                        hash_str = ''.join(f'{b:02x}' for b in node.hash_value[:4])
+                        print(f"  重建参数 {param_id_str} 叶子节点：哈希值 = 0x{hash_str}...")
+
+                        # 构建模型子树
+                    new_model_root = self._build_internal_nodes(leaf_nodes)
+                    new_model_root.model_id = model_id[0:8]
+
+                    # 更新模型树和参数映射
+                    self.model_trees[model_id] = new_model_root
+                    self.model_params[model_id] = param_map
+
+                    hash_str = ''.join(f'{b:02x}' for b in new_model_root.hash_value[:4])
+                    print(f"  模型 {model_id} 子树重建成功，根哈希: 0x{hash_str}...")
+
+                    # 收集所有模型的子树根节点
+                all_model_roots = list(self.model_trees.values())
+
+                # 保存当前全局根哈希
+                old_root_hash = self.root.hash_value.hex() if self.root else None
+
+                # 重建全局树
+                new_global_root = self._build_internal_nodes(all_model_roots)
+
+                # 更新全局根节点
+                self.root = new_global_root
+
+                # 记录新根哈希
+                new_root_hash = self.root.hash_value.hex()
+
+                print(f"全局根哈希从 {old_root_hash[:8]}... 变更为 {new_root_hash[:8]}...")
+
+            except Exception as e:
+                print(f"重建树结构失败: {str(e)}")
+                traceback.print_exc()
+
+            print(
+                f"总共修改了 {sum(len(params) for model_id, params in param_modifications.items())} 个参数")
+
+            # 返回更新后的树
+            return self
+
+            # 3. 处理添加整个模型
+        if model_to_add:
+            try:
+                # 为新模型构建子树
+                new_model_roots = []
+                for model_id_str in model_to_add.keys():
+                    model_params = model_to_add[model_id_str]
+
+                    leaf_nodes = []
+                    param_map = {}
+
+                    for param_id_str in model_params.keys():
+                        node = CHTNode()
+                        node.is_leaf = True
+                        node.data = model_params[param_id_str]
+                        node.param_id = param_id_str
+
+                        encoded_data = self._encode_param(model_id_str, param_id_str, model_params[param_id_str])
+
+                        node.rho = ChameleonHash.get_random_in_range(self.keys.get_q())
+                        node.delta = ChameleonHash.get_random_in_range(self.keys.get_q())
+
+                        node.hash_value = ChameleonHash.hash(encoded_data, node.rho, node.delta, self.public_keys)
+
+                        leaf_nodes.append(node)
+                        param_map[param_id_str] = node
+                        hash_str = ''.join(f'{b:02x}' for b in node.hash_value[:4])
+                        print(f"  parameter {param_id_str} leaf node：hash value = 0x{hash_str}...")
+
+                    new_model_root = self._build_internal_nodes(leaf_nodes)
+
+                    new_model_root.model_id = model_id_str[0:4]
+                    new_model_roots.append(new_model_root)
+
+                    self.model_trees[model_id_str] = new_model_root
+                    self.model_params[model_id_str] = param_map
+
+                    hash_str = ''.join(f'{b:02x}' for b in new_model_root.hash_value[:4])
+                    print(f"  model {model_id_str} sub-tree building successfully, root hash: 0x{hash_str}...")
+
+                self.root = self._build_internal_nodes(new_model_roots)
+
+                # 首先，获取当前所有模型的子树根节点
+                current_model_roots = list(self.model_trees.values())
+
+                # 合并当前模型根和新模型根
+                all_model_roots = current_model_roots
+
+                # 保存当前全局根哈希
+                old_root_hash = self.root.hash_value.hex() if self.root else None
+
+                # 重建全局树
+                new_global_root = self._build_internal_nodes(all_model_roots)
+
+                # 更新全局根节点
+                self.root = new_global_root
+
+                # 记录新根哈希
+                new_root_hash = self.root.hash_value.hex()
+
+            except Exception as e:
+                print(f"添加模型失败: {str(e)}")
+
+                # 返回树结构
+        return self
 
 def draw_tree(tree_or_root, output_file="./figure/CHT.png", max_depth=15):
     """
@@ -793,11 +1168,11 @@ def main():
 
 
 if __name__ == "__main__":
-    # CHT = main()
+    CHT = main()
     #
     # # draw_tree(CHT, output_file="../figure/CHT.png")
     #
     # save_chameleon_hash_tree(CHT, "./CHT.tree")
 
-    CHT = load_chameleon_hash_tree("./CHT.tree")
-    print(CHT)
+    # CHT = load_chameleon_hash_tree("./CHT.tree")
+    # print(CHT)

@@ -1,0 +1,10 @@
+cnn1:../pre-trained-model/model/cnn1_model_params.npy
+cnn2:../pre-trained-model/model/cnn2_model_params.npy
+cnn3:../pre-trained-model/model/cnn3_model_params.npy
+cnn4:../pre-trained-model/model/cnn4_model_params.npy
+cnn5:../pre-trained-model/model/cnn5_model_params.npy
+lenet1:../pre-trained-model/model/lenet1_model_params.npy
+lenet5:../pre-trained-model/model/lenet5_model_params.npy
+alexnet:../pre-trained-model/model/alexnet_model_params.npy
+vgg16:../pre-trained-model/model/VGG16_model_params.npy
+resnet18:../pre-trained-model/model/ResNet18_model_params.npy

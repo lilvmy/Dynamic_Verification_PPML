@@ -1,3 +1,10 @@
 cnn1:../level_homomorphic_encryption/model_hash_nodes/cnn1_model_params_hash_node.zpkl
 cnn2:../level_homomorphic_encryption/model_hash_nodes/cnn2_model_params_hash_node.zpkl
 cnn3:../level_homomorphic_encryption/model_hash_nodes/cnn3_model_params_hash_node.zpkl
+cnn4:../level_homomorphic_encryption/model_hash_nodes/cnn4_model_params_hash_node.zpkl
+cnn5:../level_homomorphic_encryption/model_hash_nodes/cnn5_model_params_hash_node.zpkl
+lenet1:../level_homomorphic_encryption/model_hash_nodes/lenet1_model_params_hash_node.zpkl
+lenet5:../level_homomorphic_encryption/model_hash_nodes/lenet5_model_params_hash_node.zpkl
+alexnet:../level_homomorphic_encryption/model_hash_nodes/alexnet_model_params_hash_node.zpkl
+vgg16:../level_homomorphic_encryption/model_hash_nodes/VGG16_model_params_hash_node.zpkl
+resnet18:../level_homomorphic_encryption/model_hash_nodes/ResNet18_model_params_hash_node.zpkl

@@ -1,0 +1,24 @@
+{
+  "timestamp": 1743433714,
+  "version": 1,
+  "root_hash": "78187e3a0487ac0f559e61be603996ce67059b588d6797fcc26fcf7c2b2a23ea",
+  "security_code": "5958",
+  "model_count": 8,
+  "model_ids": [
+    "cnn1",
+    "cnn2",
+    "cnn3",
+    "cnn4",
+    "cnn5",
+    "lenet1",
+    "lenet5",
+    "alexnet"
+  ],
+  "performance_stats": {
+    "build": {
+      "build_time_sec": 43.186320781707764,
+      "memory_used_mb": 6772.21484375,
+      "tree_size_mb": 2475.854471206665
+    }
+  }
+}

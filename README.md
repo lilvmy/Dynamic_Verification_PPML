@@ -14,7 +14,3 @@ First, we should install some packages as follows:
     pip install .
     <br>
     cd Pyfhel/Pyfhel----------delete __init__.py 
-
-Second,
-
-Third

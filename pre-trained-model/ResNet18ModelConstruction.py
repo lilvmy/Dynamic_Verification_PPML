@@ -38,9 +38,9 @@ class ResNet18(nn.Module):
         """
         super(ResNet18, self).__init__()
 
-        # 定义残差连接函数
+        # Define residual connection function
         def make_residual_connection(inputs, outputs):
-            """构建残差连接"""
+            """Build residual connection"""
             downsample = None
             if inputs != outputs or stride != 1:
                 downsample = nn.Sequential(
@@ -49,110 +49,108 @@ class ResNet18(nn.Module):
                 )
             return downsample
 
-            # 定义基本残差块
-
+        # Define basic residual block
         def basic_block(inputs, outputs, stride=1):
-            """构建基本残差块"""
+            """Build basic residual block"""
             layers = []
-            # 第一个卷积层
+            # First convolutional layer
             layers.append(Conv2d(inputs, outputs, kernel_size=3, stride=stride, padding=1, bias=False))
             layers.append(BatchNorm2d(outputs))
             layers.append(ReLU(inplace=True))
 
-            # 第二个卷积层
+            # Second convolutional layer
             layers.append(Conv2d(outputs, outputs, kernel_size=3, stride=1, padding=1, bias=False))
             layers.append(BatchNorm2d(outputs))
 
             return nn.Sequential(*layers)
 
-            # 使用顺序模型保持原有结构
-
+        # Use sequential model to maintain original structure
         self.resnet18 = nn.Sequential(
-            # 初始卷积层
+            # Initial convolutional layer
             Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
             BatchNorm2d(64),
             ReLU(inplace=True),
             AvgPool2d(kernel_size=3, stride=2, padding=1),
 
-            # Layer 1 (2个残差块, 保持通道数=64)
-            # 残差块1
+            # Layer 1 (2 residual blocks, maintain channels=64)
+            # Residual block 1
             Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(64),
             ReLU(inplace=True),
             Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(64),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # 残差块2
+            # Residual block 2
             Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(64),
             ReLU(inplace=True),
             Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(64),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # Layer 2 (2个残差块, 通道数64->128)
-            # 残差块1 (下采样)
+            # Layer 2 (2 residual blocks, channels 64->128)
+            # Residual block 1 (downsampling)
             Conv2d(64, 128, kernel_size=3, stride=2, padding=1, bias=False),
             BatchNorm2d(128),
             ReLU(inplace=True),
             Conv2d(128, 128, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(128),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # 残差块2
+            # Residual block 2
             Conv2d(128, 128, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(128),
             ReLU(inplace=True),
             Conv2d(128, 128, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(128),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # Layer 3 (2个残差块, 通道数128->256)
-            # 残差块1 (下采样)
+            # Layer 3 (2 residual blocks, channels 128->256)
+            # Residual block 1 (downsampling)
             Conv2d(128, 256, kernel_size=3, stride=2, padding=1, bias=False),
             BatchNorm2d(256),
             ReLU(inplace=True),
             Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(256),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # 残差块2
+            # Residual block 2
             Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(256),
             ReLU(inplace=True),
             Conv2d(256, 256, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(256),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # Layer 4 (2个残差块, 通道数256->512)
-            # 残差块1 (下采样)
+            # Layer 4 (2 residual blocks, channels 256->512)
+            # Residual block 1 (downsampling)
             Conv2d(256, 512, kernel_size=3, stride=2, padding=1, bias=False),
             BatchNorm2d(512),
             ReLU(inplace=True),
             Conv2d(512, 512, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(512),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # 残差块2
+            # Residual block 2
             Conv2d(512, 512, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(512),
             ReLU(inplace=True),
             Conv2d(512, 512, kernel_size=3, stride=1, padding=1, bias=False),
             BatchNorm2d(512),
-            ReLU(inplace=True),  # 残差连接在forward中处理
+            ReLU(inplace=True),  # Residual connection handled in forward
 
-            # 全局平均池化
+            # Global average pooling
             AdaptiveAvgPool2d((1, 1)),
 
-            # 展平层
+            # Flatten layer
             Flatten(),
 
-            # 全连接层
+            # Fully connected layer
             Linear(512, num_classes)
         )
 
-        # 初始化网络权重
+        # Initialize network weights
         for m in self.modules():
             if isinstance(m, Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -163,10 +161,10 @@ class ResNet18(nn.Module):
     def forwardRegular(self, x):
         """
         Forward pass of the ResNet18 model.
-        注意：此处无法在Sequential模型中实现残差连接，
-        真正的ResNet18需要使用自定义模块来实现。
+        Note: Residual connections cannot be implemented in Sequential model here,
+        true ResNet18 requires custom modules.
         """
-        # 使用Sequential模型进行前向传播
+        # Use Sequential model for forward propagation
         out = self.resnet18(x)
         return out
 
@@ -259,7 +257,7 @@ def testing(test_loader, device, model):
 
 def main():
     """
-    Main function to set up, train, and experiments the VGG16 model in both original and fixed-point representation settings.
+    Main function to set up, train, and test the ResNet18 model in both original and fixed-point representation settings.
     """
     batch_size, num_classes, learning_rate, num_epochs, device = setVariables()
 
@@ -292,5 +290,3 @@ if __name__ == "__main__":
     load_params = np.load("./model/ResNet18_model_params.npy", allow_pickle=True).item()
 
     print(load_params)
-
-

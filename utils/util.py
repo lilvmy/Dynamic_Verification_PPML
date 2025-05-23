@@ -6,7 +6,7 @@ def generate_random_matrices(count, shape_range=None, fixed_shape=None,
                              min_val=-10, max_val=10,
                              ensure_mixed_signs=True, seed=None):
     """
-    生成多个包含正负元素的随机矩阵
+    Generate multiple random matrices containing both positive and negative elements
     """
     if seed is not None:
         np.random.seed(seed)
@@ -14,7 +14,7 @@ def generate_random_matrices(count, shape_range=None, fixed_shape=None,
     matrices = []
 
     for i in range(count):
-        # 确定当前矩阵的形状
+        # Determine the shape of current matrix
         if fixed_shape is not None:
             rows, cols = fixed_shape
         elif shape_range is not None:
@@ -22,19 +22,19 @@ def generate_random_matrices(count, shape_range=None, fixed_shape=None,
             rows = np.random.randint(min_rows, max_rows + 1)
             cols = np.random.randint(min_cols, max_cols + 1)
         else:
-            # 默认形状范围
+            # Default shape range
             rows = np.random.randint(2, 11)
             cols = np.random.randint(2, 11)
 
-        # 生成随机矩阵
+        # Generate random matrix
         matrix = np.random.uniform(min_val, max_val, (rows, cols))
 
-        # 确保矩阵同时包含正负元素
+        # Ensure matrix contains both positive and negative elements
         if ensure_mixed_signs:
             while not (np.any(matrix > 0) and np.any(matrix < 0)):
                 matrix = np.random.uniform(min_val, max_val, (rows, cols))
 
-                # 如果经过多次尝试仍无法满足条件，强制添加正负元素
+                # If condition cannot be met after multiple attempts, force adding positive and negative elements
                 if not np.any(matrix > 0):
                     matrix.flat[np.random.randint(0, matrix.size)] = np.random.uniform(0.1, max_val)
                 if not np.any(matrix < 0):
@@ -42,11 +42,11 @@ def generate_random_matrices(count, shape_range=None, fixed_shape=None,
 
         matrices.append(matrix)
 
-    # 如果所有矩阵形状相同，返回3D数组
+    # If all matrices have same shape, return 3D array
     if fixed_shape is not None or all(m.shape == matrices[0].shape for m in matrices):
-        return np.stack(matrices)  # 使用np.stack代替np.array确保创建正确的维度
+        return np.stack(matrices)  # Use np.stack instead of np.array to ensure correct dimensions
     else:
-        # 形状不同时，返回包含矩阵的对象数组
+        # When shapes are different, return object array containing matrices
         result = np.empty(count, dtype=object)
         for i, matrix in enumerate(matrices):
             result[i] = matrix
@@ -80,4 +80,3 @@ def get_size(obj, seen=None):
 if __name__ == "__main__":
     res = generate_random_matrices(count=1, fixed_shape=(1, 64), min_val=-1, max_val=1)
     print(res)
-

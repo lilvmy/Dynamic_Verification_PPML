@@ -18,57 +18,57 @@ import os
 
 def draw_verification_costs_with_different_schemes(file_path):
     """
-    从CSV文件读取数据并绘制不同方案下模型的时间与存储成本柱状图
+    Read data from CSV file and draw bar charts for time and storage costs of models under different schemes
 
-    参数:
-    file_path -- CSV文件路径
+    Parameters:
+    file_path -- CSV file path
     """
-    # 检查文件是否存在
+    # Check if file exists
     if not os.path.exists(file_path):
-        print(f"错误: 文件 '{file_path}' 不存在")
+        print(f"Error: File '{file_path}' does not exist")
         return
 
-    # 从文件读取数据
+    # Read data from file
     try:
         df = pd.read_csv(file_path)
     except Exception as e:
-        print(f"读取文件出错: {str(e)}")
+        print(f"Error reading file: {str(e)}")
         return
 
-    # 检查必要的列是否存在
+    # Check if required columns exist
     required_columns = ['schemes', 'model_name', 'time_costs', 'storage_costs']
     for col in required_columns:
         if col not in df.columns:
-            print(f"错误: CSV文件缺少必要的列 '{col}'")
+            print(f"Error: CSV file missing required column '{col}'")
             return
 
-    # 转换数值列为浮点数
+    # Convert numeric columns to float
     df['time_costs'] = pd.to_numeric(df['time_costs'], errors='coerce')
     df['storage_costs'] = pd.to_numeric(df['storage_costs'], errors='coerce')
 
-    # 设置字体
+    # Set font
     plt.rcParams['font.family'] = 'DejaVu Serif'
     plt.rcParams['font.serif'] = ['Times New Roman']
 
-    # 获取唯一的方案和模型名称
+    # Get unique schemes and model names
     schemes = sorted(df['schemes'].unique())
     model_names = df['model_name'].unique()
 
-    # 为每个方案设置不同颜色
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']  # 不同颜色
-    width = 0.25  # 条形宽度
+    # Set different colors for each scheme
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']  # Different colors
+    width = 0.25  # Bar width
 
-    # 创建x轴位置
+    # Create x-axis positions
     x = np.arange(len(model_names))
 
-    # ====== 时间成本图表 ======
+    # ====== Time Cost Chart ======
     plt.figure(figsize=(7, 5))
 
-    # 绘制时间柱状图
+    # Draw time bar chart
     for i, scheme in enumerate(schemes):
         scheme_data = df[df['schemes'] == scheme]
 
-        # 确保数据按模型名称排序
+        # Ensure data is sorted by model name
         scheme_data = pd.merge(
             pd.DataFrame({'model_name': model_names}),
             scheme_data,
@@ -79,45 +79,45 @@ def draw_verification_costs_with_different_schemes(file_path):
         plt.bar(x + (i - len(schemes) / 2 + 0.5) * width, scheme_data['time_costs'],
                 width, label=scheme, color=colors[i % len(colors)])
 
-    # 添加标签和标题
+    # Add labels and title
     plt.xlabel('Model name', fontsize=12, fontweight='bold')
     plt.ylabel('Verification time costs (ms)', fontsize=12, fontweight='bold')
     # plt.title('Time Costs for Different Schemes and Models', fontsize=14, fontweight='bold')
     plt.xticks(x, model_names, fontsize=10)
     plt.yticks(fontsize=10)
 
-    # 创建对数刻度以更好地显示小值
+    # Create log scale to better display small values
     plt.yscale('log')
 
-    # 格式化y轴刻度以提高可读性
+    # Format y-axis ticks for better readability
     plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:,.0f}'.format(x)))
 
-    # 添加图例
+    # Add legend
     plt.legend(fontsize=10)
 
-    # 使用紧凑布局
+    # Use tight layout
     plt.tight_layout()
 
-    # 创建输出目录(如果不存在)
+    # Create output directory (if it doesn't exist)
     output_dir = '../figure'
     os.makedirs(output_dir, exist_ok=True)
 
-    # 保存图像
+    # Save image
     time_output_path = os.path.join(output_dir, '../figure/verification_time_costs_with_different_models_and_schemes.png')
     plt.savefig(time_output_path, dpi=300, bbox_inches='tight')
-    print(f"已保存时间成本图表到: {time_output_path}")
+    print(f"Time cost chart saved to: {time_output_path}")
 
-    # 显示图像
+    # Display image
     plt.show()
 
-    # ====== 存储成本图表 ======
+    # ====== Storage Cost Chart ======
     plt.figure(figsize=(7, 5))
 
-    # 绘制存储柱状图
+    # Draw storage bar chart
     for i, scheme in enumerate(schemes):
         scheme_data = df[df['schemes'] == scheme]
 
-        # 确保数据按模型名称排序
+        # Ensure data is sorted by model name
         scheme_data = pd.merge(
             pd.DataFrame({'model_name': model_names}),
             scheme_data,
@@ -128,37 +128,36 @@ def draw_verification_costs_with_different_schemes(file_path):
         plt.bar(x + (i - len(schemes) / 2 + 0.5) * width, scheme_data['storage_costs'],
                 width, label=scheme, color=colors[i % len(colors)])
 
-    # 添加标签和标题
+    # Add labels and title
     plt.xlabel('Model name', fontsize=12, fontweight='bold')
     plt.ylabel('Verification storage costs (MB)', fontsize=12, fontweight='bold')
     # plt.title('Storage Costs for Different Schemes and Models', fontsize=14, fontweight='bold')
     plt.xticks(x, model_names, fontsize=10)
     plt.yticks(fontsize=10)
 
-    # 创建对数刻度以更好地显示小值
+    # Create log scale to better display small values
     plt.yscale('log')
 
-    # 格式化y轴刻度以提高可读性
+    # Format y-axis ticks for better readability
     plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:,.1f}'.format(x)))
 
-    # 添加图例
+    # Add legend
     plt.legend(fontsize=10)
 
-    # 使用紧凑布局
+    # Use tight layout
     plt.tight_layout()
 
-    # 保存图像
+    # Save image
     storage_output_path = os.path.join(output_dir, '../figure/verification_storage_costs_with_different_models_and_schemes.png')
     plt.savefig(storage_output_path, dpi=300, bbox_inches='tight')
-    print(f"已保存存储成本图表到: {storage_output_path}")
+    print(f"Storage cost chart saved to: {storage_output_path}")
 
-    # 显示图像
+    # Display image
     plt.show()
 
 
-# 使用示例
+# Usage example
 if __name__ == "__main__":
-    # 指定CSV文件的路径
+    # Specify CSV file path
     file_path = '../table/verification_time_storage_costs_comparison.txt'
     draw_verification_costs_with_different_schemes(file_path)
-

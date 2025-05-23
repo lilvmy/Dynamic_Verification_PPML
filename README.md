@@ -1,5 +1,5 @@
 # Results_Verification_PPML
-A secure DNN inference service with results verification
+A secure DNN inference service with dynamic verification
 
 First, we should install some packages as follows:
 

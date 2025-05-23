@@ -14,13 +14,13 @@ import pickle
 
 
 class PublicKeySet:
-    """变色龙哈希公钥集"""
+    """Chameleon hash public key set"""
 
     def __init__(self, p, q, g, pk):
-        self.p = p  # 安全素数
-        self.q = q  # 素数q, p = 2q + 1
-        self.g = g  # 生成元
-        self.pk = pk  # 公钥
+        self.p = p  # Safe prime
+        self.q = q  # Prime q, p = 2q + 1
+        self.g = g  # Generator
+        self.pk = pk  # Public key
 
     def get_p(self):
         return self.p
@@ -36,11 +36,11 @@ class PublicKeySet:
 
 
 class PrivateKeySet(PublicKeySet):
-    """变色龙哈希私钥集及相关参数"""
+    """Chameleon hash private key set and related parameters"""
 
     def __init__(self, p, q, g, sk, pk):
         super().__init__(p, q, g, pk)
-        self.sk = sk  # 私钥
+        self.sk = sk  # Private key
 
     def get_secret_key(self):
         return self.sk
@@ -49,49 +49,49 @@ class PrivateKeySet(PublicKeySet):
         return PublicKeySet(self.p, self.q, self.g, self.pk)
 
 class ModelVerifier:
-    """客户端模型验证器，按模型ID验证整个模型"""
+    """Client model verifier, verifies entire model by model ID"""
 
     def __init__(self, ch_public_keys: PublicKeySet, ecdsa_public_key: ecdsa.VerifyingKey):
-        """初始化客户端验证器"""
+        """Initialize client verifier"""
         self.ch_public_keys = ch_public_keys
         self.ecdsa_public_key = ecdsa_public_key
         self.known_model_params = {}  # {model_id_str: {param_id_str: data}}
 
     def register_model(self, model_id_str: str, params_data: Dict[str, bytes]):
-        """注册整个模型的参数，用于后续审计"""
+        """Register entire model parameters for subsequent auditing"""
         self.known_model_params[model_id_str] = params_data.copy()
 
     def _encode_param(self, model_id: str, param_id: str, data: bytes) -> bytes:
-        """编码模型参数，与服务器使用相同的方法"""
-        # 将字符串转换为UTF-8字节
+        """Encode model parameters using the same method as server"""
+        # Convert strings to UTF-8 bytes
         model_bytes = model_id.encode('utf-8')
         param_bytes = param_id.encode('utf-8')
 
-        # 添加长度前缀以确保唯一解码
+        # Add length prefix to ensure unique decoding
         model_len = len(model_bytes).to_bytes(2, byteorder='big')
         param_len = len(param_bytes).to_bytes(2, byteorder='big')
 
         return model_len + model_bytes + param_len + param_bytes + data
 
     def verify_model(self, model_verification_package: Dict) -> Dict[str, Any]:
-        """验证整个模型的完整性
+        """Verify integrity of entire model
 
-        处理流程:
-        1. 验证全局根签名
-        2. 验证每个参数的局部证明路径
-        3. 验证从模型子树到全局根的证明路径
+        Processing flow:
+        1. Verify global root signature
+        2. Verify local proof path for each parameter
+        3. Verify proof path from model subtree to global root
         """
         results = {
             'signature': {'valid': False},
             'params': {},
             'model_path': {'valid': False},
             'overall': {'valid': False},
-            'timing': {}  # 添加时间记录
+            'timing': {}  # Add timing records
         }
 
         pkg = model_verification_package
 
-        # 1. 验证根节点签名
+        # 1. Verify root node signature
         root_hash_hex = ''.join(f'{b:02x}' for b in pkg['global_root_hash'])
         message = f"{root_hash_hex}|{pkg['timestamp']}|{pkg['version']}".encode()
 
@@ -103,25 +103,25 @@ class ModelVerifier:
             )
             results['signature'] = {'valid': sig_valid}
         except Exception as e:
-            results['signature'] = {'valid': False, 'message': f"签名验证异常: {str(e)}"}
+            results['signature'] = {'valid': False, 'message': f"Signature verification exception: {str(e)}"}
 
-        # 2. 验证每个参数的局部证明路径
-        # 使用字典记录篡改的参数
+        # 2. Verify local proof path for each parameter
+        # Use dictionary to record tampered parameters
         tampered_params = {}
         model_id = pkg['model_id']
 
-        # 将参数排序以确保每次验证顺序一致
+        # Sort parameters to ensure consistent verification order
         sorted_param_ids = sorted(pkg['params'].keys())
 
         for param_id_str in sorted_param_ids:
             param_data = pkg['params'][param_id_str]
-            # 编码完整参数数据
+            # Encode complete parameter data
             encoded_data = self._encode_param(model_id, param_id_str, param_data)
 
-            # 获取参数证明
+            # Get parameter proof
             param_proof = pkg['params_proofs'][param_id_str]
 
-            # 计算叶节点哈希
+            # Calculate leaf node hash
             current_hash = ChameleonHash.hash(
                 encoded_data,
                 param_proof['rho'],
@@ -129,20 +129,20 @@ class ModelVerifier:
                 self.ch_public_keys
             )
 
-            # 保存原始叶子哈希，用于判断参数是否被篡改
+            # Save original leaf hash for determining if parameter was tampered
             original_leaf_hash = current_hash
 
-            # 沿着证明路径计算到模型子树根
+            # Calculate along proof path to model subtree root
             for step in param_proof['proof']:
                 sibling_hash = step['hash']
 
-                # 按照位置组合哈希
+                # Combine hash according to position
                 if step['position'] == 'left':
                     combined_data = sibling_hash + current_hash
                 else:
                     combined_data = current_hash + sibling_hash
 
-                    # 计算父节点哈希
+                # Calculate parent node hash
                 current_hash = ChameleonHash.hash(
                     combined_data,
                     step['rho'],
@@ -150,34 +150,34 @@ class ModelVerifier:
                     self.ch_public_keys
                 )
 
-                # 检查计算得到的哈希是否与期望的模型根哈希匹配
+            # Check if calculated hash matches expected model root hash
             param_valid = current_hash == pkg['model_root_hash']
             results['params'][param_id_str] = {'valid': param_valid}
 
-            # 如果参数验证失败，记录到篡改列表
+            # If parameter verification fails, record to tampered list
             if not param_valid:
                 tampered_params[param_id_str] = original_leaf_hash
 
-        # 计算成功验证的参数数量和失败的参数数量
+        # Calculate number of successfully verified and failed parameters
         valid_params_count = sum(1 for result in results['params'].values() if result['valid'])
         invalid_params_count = len(results['params']) - valid_params_count
 
-        # 3. 验证从模型子树到全局根的路径
+        # 3. Verify path from model subtree to global root
         model_path_valid = len(tampered_params) == 0
 
-        # 为了完整性，我们仍然执行验证步骤
+        # For completeness, we still execute verification steps
         current_hash = pkg['model_root_hash']
 
         for step in pkg['global_proof']:
             sibling_hash = step['hash']
 
-            # 按照位置组合哈希
+            # Combine hash according to position
             if step['position'] == 'left':
                 combined_data = sibling_hash + current_hash
             else:
                 combined_data = current_hash + sibling_hash
 
-                # 计算父节点哈希
+            # Calculate parent node hash
             current_hash = ChameleonHash.hash(
                 combined_data,
                 step['rho'],
@@ -185,46 +185,45 @@ class ModelVerifier:
                 self.ch_public_keys
             )
 
-        # 检查计算得到的根哈希是否与期望的全局根哈希匹配
+        # Check if calculated root hash matches expected global root hash
         computed_path_valid = current_hash == pkg['global_root_hash']
 
-        # 模型路径验证结果应该反映参数篡改的影响
-        # 如果有参数被篡改，即使路径验证计算成功，我们也应将其标记为失败
+        # Model path verification result should reflect impact of parameter tampering
+        # If parameters were tampered, even if path verification calculation succeeds, we should mark it as failed
         results['model_path'] = {
             'valid': model_path_valid and computed_path_valid,
             'computed_valid': computed_path_valid,
             'tampered_params_detected': len(tampered_params) > 0
         }
 
-        # 整体验证结果
+        # Overall verification result
         signature_valid = results['signature']['valid']
         params_all_valid = valid_params_count == len(results['params'])
 
-        # 决定整体验证结果
+        # Determine overall verification result
         overall_valid = signature_valid and params_all_valid and results['model_path']['valid']
 
         if not signature_valid:
-            results['overall'] = {'valid': False, 'message': "验证失败: 全局签名无效"}
+            results['overall'] = {'valid': False, 'message': "Verification failed: Global signature invalid"}
         elif not params_all_valid:
-            results['overall'] = {'valid': False, 'message': f"验证失败: {invalid_params_count}个参数验证失败"}
+            results['overall'] = {'valid': False, 'message': f"Verification failed: {invalid_params_count} parameter verifications failed"}
         elif not results['model_path']['valid']:
-            results['overall'] = {'valid': False, 'message': "验证失败: 模型路径验证失败"}
+            results['overall'] = {'valid': False, 'message': "Verification failed: Model path verification failed"}
         else:
-            results['overall'] = {'valid': True, 'message': "验证成功: 所有检查均通过"}
+            results['overall'] = {'valid': True, 'message': "Verification successful: All checks passed"}
 
-
-        # 添加验证结果的详细信息
+        # Add detailed information of verification results
         results['summary'] = {
-            '验证签名': '成功' if signature_valid else '失败',
-            '验证模型路径': '成功' if results['model_path']['valid'] else '失败',
-            '参数验证': f"{valid_params_count} 个成功, {invalid_params_count} 个失败",
-            '整体结果': '验证成功' if overall_valid else '验证失败',
+            'Signature verification': 'Success' if signature_valid else 'Failed',
+            'Model path verification': 'Success' if results['model_path']['valid'] else 'Failed',
+            'Parameter verification': f"{valid_params_count} successful, {invalid_params_count} failed",
+            'Overall result': 'Verification successful' if overall_valid else 'Verification failed',
         }
 
         return results
 
     def audit_model(self, model_id_str: str, model_params: Dict[str, bytes]) -> List[Dict]:
-        """审计模型参数，检测哪些参数被修改"""
+        """Audit model parameters, detect which parameters were modified"""
         if model_id_str not in self.known_model_params:
             return []
 
@@ -243,23 +242,23 @@ class ModelVerifier:
 
         return modified_params
 
-# ====================== 云服务器实现 ======================
+# ====================== Cloud Server Implementation ======================
 class ModelCloudServer:
-    """云服务器实现，支持按model_id获取整个模型"""
+    """Cloud server implementation, supports getting entire model by model_id"""
 
     def __init__(self, HE, model_tree: ChameleonHashTree, all_models_data: Dict[str, Dict[str, bytes]]):
-        """初始化云服务器"""
+        """Initialize cloud server"""
         self.model_tree = model_tree
         self.HE = HE
         self.models_data = all_models_data
         self.modified_params = {}  # {model_id_str: [param_id_str, ...]}
 
     def get_model(self, model_id_str: str, tamper_param_size = None, honest: bool = True) -> Dict[str, Any]:
-        """获取整个模型及验证所需信息"""
+        """Get entire model and information required for verification"""
         if model_id_str not in self.models_data:
-            raise ValueError(f"模型{model_id_str}不存在")
+            raise ValueError(f"Model {model_id_str} does not exist")
 
-        # 获取模型验证包
+        # Get model verification package
         verification_package = self.model_tree.get_model_proof(model_id_str)
 
         # if malicious, tamper param
@@ -301,24 +300,24 @@ class ModelCloudServer:
         return verification_package
 
     def modify_model_param(self, model_id_str: Union[str, List[str]],param_id_str: Union[str, List[str], Dict[str, List[str]]]) -> ChameleonHashTree:
-        """使用变色龙哈希特性修改参数，保持哈希值不变
+        """Use chameleon hash property to modify parameters while keeping hash value unchanged
 
-        支持以下调用方式:
-        1. modify_model_param("model1", "param1") - 修改单个模型的单个参数
-        2. modify_model_param("model1", ["param1", "param2"]) - 修改单个模型的多个参数
-        3. modify_model_param(["model1", "model2"], "param1") - 修改多个模型的相同参数
+        Supports following calling methods:
+        1. modify_model_param("model1", "param1") - Modify single parameter of single model
+        2. modify_model_param("model1", ["param1", "param2"]) - Modify multiple parameters of single model
+        3. modify_model_param(["model1", "model2"], "param1") - Modify same parameter of multiple models
         4. modify_model_param(["model1", "model2"], {"model1": ["param1", "param2"], "model2": ["param1"]})
-           - 修改多个模型的特定参数
+           - Modify specific parameters of multiple models
         5. modify_model_param("model1", {"param1": new_value1, "param2": new_value2})
-           - 修改单个模型的特定参数，并提供新的参数值
+           - Modify specific parameters of single model and provide new parameter values
         """
-        # 构造参数修改映射
+        # Construct parameter modification mapping
         param_modifications = {}
 
-        # 1. 单个模型，单个参数
+        # 1. Single model, single parameter
         if isinstance(model_id_str, str) and isinstance(param_id_str, str):
             if model_id_str not in self.models_data or param_id_str not in self.models_data[model_id_str]:
-                print(f"修改参数失败: 模型 {model_id_str} 的参数 {param_id_str} 不存在")
+                print(f"Parameter modification failed: Parameter {param_id_str} of model {model_id_str} does not exist")
                 return None
 
             original_param = self.models_data[model_id_str][param_id_str]
@@ -330,16 +329,16 @@ class ModelCloudServer:
                 }
             }
 
-            # 2. 单个模型，多个参数（列表形式）
+        # 2. Single model, multiple parameters (list form)
         elif isinstance(model_id_str, str) and isinstance(param_id_str, list):
             if model_id_str not in self.models_data:
-                print(f"修改参数失败: 模型 {model_id_str} 不存在")
+                print(f"Parameter modification failed: Model {model_id_str} does not exist")
                 return None
 
             param_dict = {}
             for param_id in param_id_str:
                 if param_id not in self.models_data[model_id_str]:
-                    print(f"警告: 模型 {model_id_str} 的参数 {param_id} 不存在，已跳过")
+                    print(f"Warning: Parameter {param_id} of model {model_id_str} does not exist, skipped")
                     continue
 
                 original_param = self.models_data[model_id_str][param_id]
@@ -349,25 +348,25 @@ class ModelCloudServer:
             if param_dict:
                 param_modifications = {model_id_str: param_dict}
             else:
-                print(f"修改参数失败: 没有有效的参数可以修改")
+                print(f"Parameter modification failed: No valid parameters to modify")
                 return None
 
-                # 5. 单个模型，多个参数（字典形式，支持自定义值）
+        # 5. Single model, multiple parameters (dictionary form, supports custom values)
         elif isinstance(model_id_str, str) and isinstance(param_id_str, dict):
             if model_id_str not in self.models_data:
-                print(f"修改参数失败: 模型 {model_id_str} 不存在")
+                print(f"Parameter modification failed: Model {model_id_str} does not exist")
                 return None
 
             param_dict = {}
             for param_id, new_value in param_id_str.items():
                 if param_id not in self.models_data[model_id_str]:
-                    print(f"警告: 模型 {model_id_str} 的参数 {param_id} 不存在，已跳过")
+                    print(f"Warning: Parameter {param_id} of model {model_id_str} does not exist, skipped")
                     continue
 
-                    # 如果提供了新的参数值，直接使用它；否则使用默认的修改方式
+                # If new parameter value is provided, use it directly; otherwise use default modification method
                 if new_value is not None:
                     if not isinstance(new_value, bytes):
-                        print(f"警告: 参数 {param_id} 的新值必须是bytes类型，已跳过")
+                        print(f"Warning: New value for parameter {param_id} must be bytes type, skipped")
                         continue
                     modified_param = new_value
                 else:
@@ -379,18 +378,18 @@ class ModelCloudServer:
             if param_dict:
                 param_modifications = {model_id_str: param_dict}
             else:
-                print(f"修改参数失败: 没有有效的参数可以修改")
+                print(f"Parameter modification failed: No valid parameters to modify")
                 return None
 
-                # 3. 多个模型，单个相同参数
+        # 3. Multiple models, single same parameter
         elif isinstance(model_id_str, list) and isinstance(param_id_str, str):
             for model_id in model_id_str:
                 if model_id not in self.models_data:
-                    print(f"警告: 模型 {model_id} 不存在，已跳过")
+                    print(f"Warning: Model {model_id} does not exist, skipped")
                     continue
 
                 if param_id_str not in self.models_data[model_id]:
-                    print(f"警告: 模型 {model_id} 的参数 {param_id_str} 不存在，已跳过")
+                    print(f"Warning: Parameter {param_id_str} of model {model_id} does not exist, skipped")
                     continue
 
                 original_param = self.models_data[model_id][param_id_str]
@@ -402,29 +401,29 @@ class ModelCloudServer:
                 param_modifications[model_id][param_id_str] = modified_param
 
             if not param_modifications:
-                print(f"修改参数失败: 没有有效的模型和参数可以修改")
+                print(f"Parameter modification failed: No valid models and parameters to modify")
                 return None
 
-                # 4. 多个模型，每个模型指定参数
+        # 4. Multiple models, each model specifies parameters
         elif isinstance(model_id_str, list) and isinstance(param_id_str, dict):
             for model_id in model_id_str:
                 if model_id not in self.models_data:
-                    print(f"警告: 模型 {model_id} 不存在，已跳过")
+                    print(f"Warning: Model {model_id} does not exist, skipped")
                     continue
 
                 if model_id not in param_id_str:
-                    print(f"警告: 未为模型 {model_id} 指定参数，已跳过")
+                    print(f"Warning: No parameters specified for model {model_id}, skipped")
                     continue
 
                 model_params = param_id_str[model_id]
                 if not isinstance(model_params, list):
-                    print(f"警告: 模型 {model_id} 的参数必须是列表，已跳过")
+                    print(f"Warning: Parameters for model {model_id} must be a list, skipped")
                     continue
 
                 param_dict = {}
                 for param_id in model_params:
                     if param_id not in self.models_data[model_id]:
-                        print(f"警告: 模型 {model_id} 的参数 {param_id} 不存在，已跳过")
+                        print(f"Warning: Parameter {param_id} of model {model_id} does not exist, skipped")
                         continue
 
                     original_param = self.models_data[model_id][param_id]
@@ -435,121 +434,120 @@ class ModelCloudServer:
                     param_modifications[model_id] = param_dict
 
             if not param_modifications:
-                print(f"修改参数失败: 没有有效的模型和参数可以修改")
+                print(f"Parameter modification failed: No valid models and parameters to modify")
                 return None
         else:
-            print(f"参数错误: 不支持的参数组合")
+            print(f"Parameter error: Unsupported parameter combination")
             return None
 
-            # 调用update_model_or_params方法
+        # Call update_model_or_params method
         result_tree = self.model_tree.update_model_or_params(
             param_modifications=param_modifications
         )
 
-        # 更新本地模型数据
+        # Update local model data
         for model_id, params in param_modifications.items():
             for param_id, new_value in params.items():
-                # 只更新模型数据中存在的参数
+                # Only update parameters that exist in model data
                 if model_id in self.models_data and param_id in self.models_data[model_id]:
                     self.models_data[model_id][param_id] = new_value
 
-                    # 记录修改
+                    # Record modification
                     if model_id not in self.modified_params:
                         self.modified_params[model_id] = []
                     if param_id not in self.modified_params[model_id]:
                         self.modified_params[model_id].append(param_id)
 
-        print(f"参数修改成功: {sum(len(params) for params in param_modifications.values())} 个参数已修改")
+        print(f"Parameter modification successful: {sum(len(params) for params in param_modifications.values())} parameters modified")
         return result_tree
 
     def add_new_model(self, model_id_str: Union[str, List[str]],model_params: Union[Dict[str, bytes], Dict[str, Dict[str, bytes]]]) -> ChameleonHashTree:
-        """添加新模型到系统中，支持单个模型或批量添加多个模型"""
-        # 处理单个模型和批量模型的情况
+        """Add new model to system, supports single model or batch adding multiple models"""
+        # Handle cases of single model and batch models
         if isinstance(model_id_str, str):
-            # 单个模型的情况
+            # Single model case
             if model_id_str in self.models_data:
-                print(f"添加模型失败: 模型 {model_id_str} 已存在")
+                print(f"Add model failed: Model {model_id_str} already exists")
                 return None
 
-                # 构造添加模型请求
+            # Construct add model request
             model_to_add = {
                 model_id_str: model_params
             }
         else:
-            # 模型ID列表的情况
-            # 验证所有模型ID是否已存在
+            # Model ID list case
+            # Verify if all model IDs already exist
             existing_models = []
             for model_id in model_id_str:
                 if model_id in self.models_data:
                     existing_models.append(model_id)
 
             if existing_models:
-                print(f"添加模型失败: 以下模型已存在: {', '.join(existing_models)}")
+                print(f"Add model failed: Following models already exist: {', '.join(existing_models)}")
                 return None
 
-                # 如果model_params是单层字典，而model_id_str是列表，这是不匹配的
+            # If model_params is single-layer dictionary while model_id_str is list, this is mismatched
             if not isinstance(next(iter(model_params.values()), {}), dict):
-                print(f"参数错误: 当提供多个模型ID时，model_params必须是嵌套字典 {model_id: {model_params.keys(): data, ...}, ...}")
+                print(f"Parameter error: When providing multiple model IDs, model_params must be nested dictionary {model_id: {model_params.keys(): data, ...}, ...}")
                 return None
 
-                # 检查提供的model_params中是否包含了所有需要添加的模型
+            # Check if model_params contains all models to be added
             missing_models = set(model_id_str) - set(model_params.keys())
             if missing_models:
-                print(f"参数错误: 以下模型ID的参数未提供: {', '.join(missing_models)}")
+                print(f"Parameter error: Parameters not provided for following model IDs: {', '.join(missing_models)}")
                 return None
 
-                # 提取需要添加的模型参数
+            # Extract model parameters to be added
             model_to_add = {model_id: model_params[model_id] for model_id in model_id_str}
 
-        # 调用update_model_or_params方法，并修改返回值处理
+        # Call update_model_or_params method and modify return value handling
         tree = self.model_tree.update_model_or_params(
             model_to_add=model_to_add
         )
 
         return tree
 
-
     def delete_model(self, model_id_str: Union[str, List[str]]) -> ChameleonHashTree:
-        """从系统中删除模型，支持单个模型或批量删除多个模型"""
-        # 处理单个模型和批量模型的情况
+        """Delete model from system, supports single model or batch deleting multiple models"""
+        # Handle cases of single model and batch models
         if isinstance(model_id_str, str):
-            # 单个模型的情况
+            # Single model case
             if model_id_str not in self.models_data:
-                print(f"删除模型失败: 模型 {model_id_str} 不存在")
+                print(f"Delete model failed: Model {model_id_str} does not exist")
                 return False
 
             models_to_delete = [model_id_str]
         else:
-            # 模型ID列表的情况
-            # 验证所有模型ID是否存在
+            # Model ID list case
+            # Verify if all model IDs exist
             non_existing_models = []
             for model_id in model_id_str:
                 if model_id not in self.models_data:
                     non_existing_models.append(model_id)
 
             if non_existing_models:
-                print(f"删除模型失败: 以下模型不存在: {', '.join(non_existing_models)}")
+                print(f"Delete model failed: Following models do not exist: {', '.join(non_existing_models)}")
                 return False
 
             models_to_delete = model_id_str
 
-        # 逐个删除模型
+        # Delete models one by one
         all_success = True
         for model_id in models_to_delete:
-            # 调用update_model_or_params方法
+            # Call update_model_or_params method
             root_node = self.model_tree.update_model_or_params(
                 model_id_to_delete=model_id
             )
 
         return root_node
 
-    # ====================== 演示程序 ======================
+# ====================== Demo Program ======================
 
 def main():
     """
-    model verification display
+    Model verification display
     """
-    print("=====model veritication based on model id======\n")
+    print("=====model verification based on model id======\n")
     # set random seeds
     random.seed(42)
 
@@ -559,7 +557,6 @@ def main():
     cht_keys = load_cht_keys(key_path)
     HE = load_HE_keys()
 
-
     all_models_data = {}
     model_id_mapping = {}
     # get model id
@@ -568,7 +565,7 @@ def main():
             key, value = line.strip().split(":", 1)
             model_id_mapping[key] = value
 
-    # # get encrypted model params
+    # get encrypted model params
     for model_id, encrypted_path in model_id_mapping.items():
         all_models_data[model_id] = {}
         encrypted_model_param = extract_data_from_hash_node(encrypted_path)
@@ -587,60 +584,59 @@ def main():
     for model_id_str, params in all_models_data.items():
         client.register_model(model_id_str, params)
 
+    # === Demo 5: Detect modification of non-current requested model ===
+    print("\n===== Demo 5: Detect modification of non-current requested model =====")
 
-    # === 演示5: 检测非当前请求模型的修改 ===
-    print("\n===== 演示5: 检测非当前请求模型的修改 =====")
-
-    # 云服务器秘密修改cnn1模型的bias参数
+    # Cloud server secretly modifies bias parameter of cnn1 model
     target_model_id, target_param_id = "cnn1", "cnn1.0.bias"
-    requested_model_id = "cnn2"  # 客户端将请求不同的模型
+    requested_model_id = "cnn2"  # Client will request different model
 
-    print(f"云服务器利用变色龙哈希特性悄悄修改模型{target_model_id}的参数{target_param_id}")
+    print(f"Cloud server uses chameleon hash property to secretly modify parameter {target_param_id} of model {target_model_id}")
     cloud.modify_model_param(target_model_id, target_param_id)
 
-    # 客户端请求完全不同的模型，验证应该通过
-    print(f"\n客户端请求另一个模型{requested_model_id}")
+    # Client requests completely different model, verification should pass
+    print(f"\nClient requests another model {requested_model_id}")
     response = cloud.get_model(requested_model_id)
 
-    # 客户端验证当前请求的模型
-    print("\n客户端执行验证:")
+    # Client verifies currently requested model
+    print("\nClient performs verification:")
     results = client.verify_model(response)
 
-    print(f"  签名验证: {'通过' if results['signature']['valid'] else '失败'}")
-    print(f"  模型路径验证: {'通过' if results['model_path']['valid'] else '失败'}")
-    print(f"  参数验证: {'所有通过' if all(v['valid'] for v in results['params'].values()) else '部分失败'}")
-    print(f"  总体结果: {'验证通过' if results['overall']['valid'] else '验证失败'}")
+    print(f"  Signature verification: {'Pass' if results['signature']['valid'] else 'Failed'}")
+    print(f"  Model path verification: {'Pass' if results['model_path']['valid'] else 'Failed'}")
+    print(f"  Parameter verification: {'All pass' if all(v['valid'] for v in results['params'].values()) else 'Partial failure'}")
+    print(f"  Overall result: {'Verification passed' if results['overall']['valid'] else 'Verification failed'}")
 
-    print("\n验证通过，但其他模型参数被修改了！现在客户端全面审计所有模型...")
+    print("\nVerification passed, but other model parameters were modified! Now client performs comprehensive audit of all models...")
 
-    # 客户端审计所有已知模型
-    print("\n客户端执行全局审计，检查所有模型:")
+    # Client audits all known models
+    print("\nClient performs global audit, checking all models:")
 
     all_modified = {}
     for audit_model_id in model_id_mapping.keys():
-        print(f"  审计模型{audit_model_id}...")
+        print(f"  Auditing model {audit_model_id}...")
         model_package = cloud.get_model(audit_model_id)
         modified = client.audit_model(audit_model_id, model_package['params'])
 
         if modified:
             all_modified[audit_model_id] = modified
 
-        # 打印审计结果
-        if all_modified:
-            print("\n全局审计结果:")
+    # Print audit results
+    if all_modified:
+        print("\nGlobal audit results:")
         for model_id, params in all_modified.items():
-            print(f"  模型 {model_id} 被修改的参数:")
+            print(f"  Model {model_id} modified parameters:")
             for param_info in params:
                 param_id = param_info['param_id']
                 original = param_info['original']
                 current = param_info['current']
-                print(f"    参数 {param_id}:")
-                print(f"      原始值: {original}")
-                print(f"      当前值: {current}")
-        else:
-            print("全局审计未发现任何被修改的参数")
+                print(f"    Parameter {param_id}:")
+                print(f"      Original value: {original}")
+                print(f"      Current value: {current}")
+    else:
+        print("Global audit found no modified parameters")
 
-    print("\n=== 模型验证演示完成 ===")
+    print("\n=== Model verification demo completed ===")
 
 
 if __name__ == "__main__":

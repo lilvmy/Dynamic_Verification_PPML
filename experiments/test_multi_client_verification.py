@@ -36,93 +36,92 @@ def get_verification_time_costs_with_multi_clients():
         for name, param in encrypted_model_param.items():
             all_models_data[model_id][name] = param
 
-            # load CHT
+    # load CHT
     CHT = load_chameleon_hash_tree("../dual_verification_tree/tree/CHT_10.tree")
     print(f"CHT load successfully {CHT}")
 
     # simulate the cloud server
     cloud_server = ModelCloudServer(HE, CHT, all_models_data)
 
-    # 指定要验证的模型ID
+    # Specify model ID to verify
     specify_model_id = "lenet1"
 
-    # 获取模型验证包 - 只获取一次，以便所有客户端使用相同的验证包
+    # Get model verification package - only get once so all clients use the same verification package
     model_package = cloud_server.get_model(specify_model_id)
 
-    # 创建CSV文件并写入表头
+    # Create CSV file and write header
     with open(f"../table/multi_client_verification_time_costs_threaded.csv", 'w', newline="") as f:
         writer = csv.writer(f)
         writer.writerow(['client_count', 'avg_time'])
 
-
-    # 测试不同数量的客户端
+    # Test different numbers of clients
     client_counts = [20, 40, 60, 80, 100]
     results = {}
 
-    # 计算最大并发线程数，避免创建过多线程
+    # Calculate maximum concurrent threads to avoid creating too many threads
     max_threads = min(100, max(client_counts))
 
-    # 定义一个线程安全的列表来存储验证时间
+    # Define a thread-safe list to store verification times
     verification_times_lock = threading.Lock()
 
-    # 定义客户端验证函数
+    # Define client verification function
     def client_verify(client, model_pkg, verification_times):
         start_time = time.perf_counter()
         verification_result = client.verify_model(model_pkg)
         end_time = time.perf_counter()
 
-        verification_time = (end_time - start_time) * 1000  # 转换为毫秒
+        verification_time = (end_time - start_time) * 1000  # Convert to milliseconds
 
-        # 线程安全地添加验证时间
+        # Thread-safely add verification time
         with verification_times_lock:
             verification_times.append(verification_time)
 
         return verification_time
 
     for num_clients in client_counts:
-        # 创建指定数量的客户端
+        # Create specified number of clients
         clients = []
         for i in range(num_clients):
             client = ModelVerifier(cht_keys.get_public_key_set(), ecdsa_public_key)
             clients.append(client)
 
-            # 计算并发因子 - 根据客户端数量调整并发度
+        # Calculate concurrency factor - adjust concurrency based on client count
         concurrency_factor = min(num_clients, max_threads)
 
         verification_times = []
         total_start_time = time.perf_counter()
         completed_count = 0
 
-        # 使用线程池执行客户端验证
+        # Use thread pool to execute client verification
         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency_factor) as executor:
-            # 提交所有客户端验证任务
+            # Submit all client verification tasks
             future_to_client = {
                 executor.submit(client_verify, client, model_package, verification_times): i
                 for i, client in enumerate(clients)
             }
 
-            # 处理完成的任务
+            # Process completed tasks
             for future in concurrent.futures.as_completed(future_to_client):
                 client_idx = future_to_client[future]
                 try:
                     verification_time = future.result()
                     completed_count += 1
-                    # 每完成25%的客户端打印一次进度
+                    # Print progress every 25% of completed clients
                     if completed_count % max(1, num_clients // 4) == 0:
-                        print(f"已完成 {completed_count}/{num_clients} 个客户端的验证")
+                        print(f"Completed {completed_count}/{num_clients} client verifications")
                 except Exception as e:
-                    print(f"客户端 {client_idx} 验证时发生错误: {e}")
+                    print(f"Error occurred during client {client_idx} verification: {e}")
                     completed_count += 1
 
         total_end_time = time.perf_counter()
-        total_time = (total_end_time - total_start_time) * 1000  # 转换为毫秒
+        total_time = (total_end_time - total_start_time) * 1000  # Convert to milliseconds
 
-        # 计算统计数据
+        # Calculate statistics
         avg_time = sum(verification_times) / len(verification_times)
         min_time = min(verification_times)
         max_time = max(verification_times)
 
-        # 保存结果
+        # Save results
         results[num_clients] = {
             'avg_time': avg_time,
             'min_time': min_time,
@@ -131,14 +130,14 @@ def get_verification_time_costs_with_multi_clients():
             'concurrency_factor': concurrency_factor
         }
 
-        # 创建CSV文件并写入表头
+        # Create CSV file and write header
         with open(f"../table/multi_client_verification_time_costs_threaded.csv", 'a', newline="") as f:
             writer = csv.writer(f)
             writer.writerow([num_clients, min_time])
 
-    # 打印详细结果
-    print("\n==== 详细统计结果 ====")
-    print("客户端数量\t平均时间(ms)\t最小时间(ms)\t最大时间(ms)\t总时间(ms)\t并发度")
+    # Print detailed results
+    print("\n==== Detailed Statistical Results ====")
+    print("Client Count\tAvg Time(ms)\tMin Time(ms)\tMax Time(ms)\tTotal Time(ms)\tConcurrency")
     for num_clients, stats in results.items():
         print(
             f"{num_clients}\t\t{stats['avg_time']:.2f}\t\t{stats['min_time']:.2f}\t\t{stats['max_time']:.2f}\t\t{stats['total_time']:.2f}\t\t{stats['concurrency_factor']}")
@@ -148,80 +147,80 @@ def get_verification_time_costs_with_multi_clients():
 
 def draw_time_vs_client_count_from_file(file_path):
     """
-    从文件读取数据并绘制时间随客户端数量变化的柱状图
+    Read data from file and draw bar chart showing time vs client count
 
-    参数:
-    file_path -- CSV文件路径
+    Parameters:
+    file_path -- CSV file path
     """
-    # 检查文件是否存在
+    # Check if file exists
     if not os.path.exists(file_path):
-        print(f"错误: 文件 '{file_path}' 不存在")
+        print(f"Error: File '{file_path}' does not exist")
         return
 
-        # 从文件读取数据
+    # Read data from file
     try:
         df = pd.read_csv(file_path)
     except Exception as e:
-        print(f"读取文件出错: {str(e)}")
+        print(f"Error reading file: {str(e)}")
         return
 
-        # 检查必要的列是否存在
+    # Check if required columns exist
     required_columns = ['client_count', 'avg_time']
     for col in required_columns:
         if col not in df.columns:
-            print(f"错误: CSV文件缺少必要的列 '{col}'")
+            print(f"Error: CSV file missing required column '{col}'")
             return
 
-            # 设置字体样式
+    # Set font style
     plt.rcParams['font.family'] = 'DejaVu Serif'
     plt.rcParams['font.serif'] = ['Times New Roman']
 
-    # 创建图形
+    # Create figure
     plt.figure(figsize=(10, 6))
 
-    # 获取客户端数量和时间数据
+    # Get client count and time data
     client_counts = df['client_count'].tolist()
     avg_times = df['avg_time'].tolist()
 
-    # 设置x轴位置
+    # Set x-axis positions
     x = np.arange(len(client_counts))
-    width = 0.6  # 柱宽度
+    width = 0.6  # Bar width
 
-    # 绘制柱状图
+    # Draw bar chart
     bars = plt.bar(x, avg_times, width, color='#1f77b4')
 
-    # # 在柱上添加数值标签
+    # # Add value labels on bars
     # for bar in bars:
     #     height = bar.get_height()
     #     plt.text(bar.get_x() + bar.get_width() / 2., height + 5,
     #              f'{height:.2f}',
     #              ha='center', va='bottom', fontsize=10)
 
-        # 添加标签和标题
+    # Add labels and title
     plt.xlabel('Number of clients', fontsize=12, fontweight='bold')
     plt.ylabel('Average verification time cost (ms)', fontsize=12, fontweight='bold')
     # plt.title('Average Time vs. Number of Clients', fontsize=14, fontweight='bold')
 
-    # 设置x轴标签
+    # Set x-axis labels
     plt.xticks(x, client_counts, fontsize=12)
     plt.yticks(fontsize=12)
 
-    # # 添加网格线使图表更易读
+    # # Add grid lines to make chart more readable
     # plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # 调整布局
+    # Adjust layout
     plt.tight_layout()
 
-    # 创建输出目录(如果不存在)
+    # Create output directory (if it doesn't exist)
     output_dir = '../figure'
     os.makedirs(output_dir, exist_ok=True)
 
-    # 保存图像
+    # Save image
     output_path = os.path.join(output_dir, '../figure/avg_time_vs_client_count.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"已保存图表到: {output_path}")
+    print(f"Chart saved to: {output_path}")
 
-    # 显示图表
+    # Display chart
     plt.show()
 
 if __name__ == "__main__":
@@ -229,4 +228,3 @@ if __name__ == "__main__":
     # print(res)
 
     draw_time_vs_client_count_from_file("../table/multi_client_verification_time_costs_threaded.csv")
-

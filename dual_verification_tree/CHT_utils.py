@@ -205,7 +205,7 @@ def load_cht_keys(key_path):
     with open(key_path, "rb") as f:
         cht_keys_dict = pickle.load(f)
 
-    # 从字典中提取参数并创建PrivateKeySet对象
+    # extract parameters form cht_keys_dict and build PrivateKeySet
     return PrivateKeySet(
         p=cht_keys_dict['p'],
         q=cht_keys_dict['q'],

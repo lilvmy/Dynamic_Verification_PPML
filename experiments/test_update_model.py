@@ -168,7 +168,7 @@ def modify_model_params():
     # load HE_keys
     HE = load_HE_keys()
 
-    # 加载模型ID映射
+    # load model ID mapping
     all_models_data = {}
     model_id_mapping = {}
     with open("/home/lilvmy/paper-demo/Results_Verification_PPML/update_model_id.txt", 'r', encoding='utf-8') as f:
@@ -197,29 +197,29 @@ def modify_model_params():
     original_CHT = load_chameleon_hash_tree("../dual_verification_tree/tree/CHT_15.tree")
     cloud_server = ModelCloudServer(HE, original_CHT, all_models_data)
 
-    # 创建结果CSV文件
+    # build results csv file
     with open(f"../table/modify_model_params_time_storage_costs.csv", 'w', newline="") as f:
         writer = csv.writer(f)
         writer.writerow(['model_name', 'modify_parameters_count', 'time_costs', 'storage_costs'])
 
-        # 为每个模型进行修改测试
+        # perfom modify test for each model
     for model_id_str in modify_model_id_str:
         params = list(modify_param_id_str[model_id_str].keys())
 
         for modify_param_count in range(1, len(params) + 1):
-            # 准备要修改的参数
+            # prepare the modifing parameters
             final_modify_param = {}
             selected_params = params[0:modify_param_count]
 
             for param_id in selected_params:
                 original_param = modify_param_id_str[model_id_str][param_id]
-                # 根据参数类型生成不同的随机数据
+                # generate differnet random data based on parameters type
                 if param_id.endswith("weight"):
                     modify_param = generate_random_matrices(count=64, fixed_shape=(3, 3), min_val=-1, max_val=1)
                 else:
                     modify_param = generate_random_matrices(count=1, fixed_shape=(1, 64), min_val=-1, max_val=1)
 
-                # 处理参数数据
+                # deal with the parameters
                 modify_param_binary_info = binary_mean_representation(modify_param)
                 modify_binary_mean = modify_param_binary_info['binary_mean']
                 modify_param_features = extract_param_features(modify_param, param_id)
@@ -228,14 +228,14 @@ def modify_model_params():
                 encrypted_modify_param_mean_bytes = encrypted_modify_param_mean.to_bytes()
                 modify_param_feature_length = len(modify_param_features_bytes)
 
-                # 创建最终的修改参数
+                # build the final modify parameters
                 final_modify_param[param_id] = (
                         modify_param_feature_length.to_bytes(4, byteorder='big') +
                         modify_param_features_bytes +
                         encrypted_modify_param_mean_bytes
                 )
 
-            # 测量修改操作的时间和存储成本
+            # scale the time and storage costs of modifying operation
             start_time = time.time()
             tree = cloud_server.modify_model_param(model_id_str, final_modify_param)
             end_time = time.time()
@@ -244,15 +244,15 @@ def modify_model_params():
                 total_modify_model_params_size = tree.calculate_storage_size() / (1024 * 1024)
                 total_time = (end_time - start_time) * 1000
 
-                # 记录结果
+                # record results
                 with open(f"../table/modify_model_params_time_storage_costs.csv", 'a', newline='') as f:
                     writer = csv.writer(f)
                     writer.writerow([model_id_str, modify_param_count, total_time, total_modify_model_params_size])
 
                 print(
-                    f"已修改模型 {model_id_str} 的 {modify_param_count} 个参数，耗时 {total_time:.2f} ms，存储 {total_modify_model_params_size:.2f} MB")
+                    f"modified model {model_id_str}'s {modify_param_count} parameters，the time costs is {total_time:.2f} ms，the storage costs is {total_modify_model_params_size:.2f} MB")
             else:
-                print(f"修改模型 {model_id_str} 的 {modify_param_count} 个参数失败！")
+                print(f"modified model {model_id_str}'s {modify_param_count} parameters failure！")
     return tree
 
 
@@ -278,10 +278,10 @@ def modify_model_with_fixed_params():
         for name, param in encrypted_model_param.items():
             all_models_data[model_id][name] = param
 
-            # 可用模型列表
+    
     available_models = ['cnn1', 'cnn2', 'cnn3', 'cnn4', 'cnn5']
 
-    # 准备每个模型的前6个参数
+   
     modify_param_id_str = {}
     for model_id_str in available_models:
         modify_param_id_str[model_id_str] = {}
@@ -292,67 +292,67 @@ def modify_model_with_fixed_params():
                 break
             modify_param_id_str[model_id_str][name] = param
             count += 1
-        print(f"模型 {model_id_str} 已准备 {count} 个参数用于修改")
+        print(f"model {model_id_str} has prepared {count} parameters for mofification")
 
-        # 创建结果CSV文件
+
     csv_file_path = "../table/modify_multi_models_time_storage_costs.csv"
     with open(csv_file_path, 'w', newline="") as f:
         writer = csv.writer(f)
         writer.writerow(['models_count', 'time_costs', 'storage_costs'])
 
-        # 定义实验配置：不同的模型组合测试
+    # define experiment configuration
     experiment_configs = [
-        # 实验1: 单个模型测试
-        {'name': '单模型测试', 'models': ['cnn1']},
+       
+        {'name': 'test single model', 'models': ['cnn1']},
 
-        # 实验2: 两个模型测试
-        {'name': '双模型测试', 'models': ['cnn1', 'cnn2']},
+        
+        {'name': 'test double models', 'models': ['cnn1', 'cnn2']},
 
-        # 实验3: 三个模型测试
-        {'name': '三模型测试', 'models': ['cnn1', 'cnn2', 'cnn3']},
+        
+        {'name': 'test triple models', 'models': ['cnn1', 'cnn2', 'cnn3']},
 
-        # 实验4: 四个模型测试
-        {'name': '四模型测试', 'models': ['cnn1', 'cnn2', 'cnn3', 'cnn4']},
+        
+        {'name': 'test four models', 'models': ['cnn1', 'cnn2', 'cnn3', 'cnn4']},
 
-        # 实验5: 五个模型测试
-        {'name': '五模型测试', 'models': ['cnn1', 'cnn2', 'cnn3', 'cnn4', 'cnn5']}
+        
+        {'name': 'test five models', 'models': ['cnn1', 'cnn2', 'cnn3', 'cnn4', 'cnn5']}
     ]
 
-    # 执行每个实验配置
+   
     final_tree = None
     for exp_id, experiment in enumerate(experiment_configs, 1):
         selected_models = experiment['models']
         models_name_str = '+'.join(selected_models)
         num_models = len(selected_models)
 
-        print(f"\n===== 实验 {exp_id}: {experiment['name']} - 测试修改 {num_models} 个模型: {models_name_str} =====")
+        print(f"\n===== experiment {exp_id}: {experiment['name']} - test modified {num_models} models: {models_name_str} =====")
 
-        # 重新加载树和创建服务器实例
+       
         CHT = load_chameleon_hash_tree("../dual_verification_tree/tree/CHT_10.tree")
         print(f"CHT load successfully {CHT}")
         cloud_server = ModelCloudServer(HE, CHT, all_models_data)
 
-        # 准备要修改的所有参数（每个模型的前6个参数）
+        
         all_modify_params = {}
         total_param_count = 0
 
-        # 为每个模型准备修改参数
+       
         for model_id_str in selected_models:
-            # 为当前模型创建修改参数字典
+           
             final_modify_param = {}
             model_params = list(modify_param_id_str[model_id_str].keys())
 
-            # 使用该模型的所有准备好的参数
+            
             for param_id in model_params:
                 original_param = modify_param_id_str[model_id_str][param_id]
 
-                # 根据参数类型生成不同的随机数据
+                
                 if param_id.endswith("weight"):
                     modify_param = generate_random_matrices(count=64, fixed_shape=(3, 3), min_val=-1, max_val=1)
                 else:
                     modify_param = generate_random_matrices(count=1, fixed_shape=(1, 64), min_val=-1, max_val=1)
 
-                    # 处理参数数据
+                    
                 modify_param_binary_info = binary_mean_representation(modify_param)
                 modify_binary_mean = modify_param_binary_info['binary_mean']
                 modify_param_features = extract_param_features(modify_param, param_id)
@@ -361,33 +361,33 @@ def modify_model_with_fixed_params():
                 encrypted_modify_param_mean_bytes = encrypted_modify_param_mean.to_bytes()
                 modify_param_feature_length = len(modify_param_features_bytes)
 
-                # 创建最终的修改参数
+                
                 final_modify_param[param_id] = (
                         modify_param_feature_length.to_bytes(4, byteorder='big') +
                         modify_param_features_bytes +
                         encrypted_modify_param_mean_bytes
                 )
 
-                # 将当前模型的参数添加到总字典中
+                
             all_modify_params[model_id_str] = final_modify_param
             total_param_count += len(final_modify_param)
-            print(f"准备修改模型 {model_id_str} 的 {len(final_modify_param)} 个参数")
+            print(f"prepare modifying {model_id_str}'s {len(final_modify_param)} parameters")
 
-            # 测量多模型修改操作的时间和存储成本
+           
         start_time = time.time()
 
-        # 逐个修改每个模型的参数
+
         tree = None
         try:
-            # 依次为每个模型调用modify_model_param方法
+           
             for model_id, params in all_modify_params.items():
-                print(f"修改模型 {model_id} 的 {len(params)} 个参数...")
+                print(f"modify{model_id}'s {len(params)} parameters...")
                 tree = cloud_server.modify_model_param(model_id, params)
                 if tree is None:
-                    print(f"修改模型 {model_id} 失败！")
+                    print(f"modified {model_id} failure！")
                     break
         except Exception as e:
-            print(f"修改模型参数时发生错误: {str(e)}")
+            print(f"error of modifying model: {str(e)}")
             traceback.print_exc()
 
         end_time = time.time()
@@ -395,9 +395,8 @@ def modify_model_with_fixed_params():
         if tree is not None:
             total_modify_models_size = tree.calculate_storage_size() / (1024 * 1024)
             total_time = (end_time - start_time) * 1000
-            final_tree = tree  # 保存最后一次实验的树
+            final_tree = tree  
 
-            # 记录结果
             with open(csv_file_path, 'a', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow([
@@ -406,14 +405,14 @@ def modify_model_with_fixed_params():
                     total_modify_models_size
                 ])
 
-                # 每个模型参数的平均修改时间
+              
             avg_time_per_param = total_time / total_param_count if total_param_count > 0 else 0
 
-            print(f"已修改 {num_models} 个模型共 {total_param_count} 个参数，")
-            print(f"总耗时 {total_time:.2f} ms，平均每参数 {avg_time_per_param:.2f} ms")
-            print(f"存储大小 {total_modify_models_size:.2f} MB")
+            print(f"modified {num_models} models {total_param_count} parameters，")
+            print(f"total time costs is {total_time:.2f} ms，average {avg_time_per_param:.2f} ms for each parameter")
+            print(f"total storage costs is {total_modify_models_size:.2f} MB")
         else:
-            print(f"修改 {num_models} 个模型的参数失败！")
+            print(f"modifing {num_models} model parameters failure！")
 
     return final_tree
 

@@ -17,43 +17,43 @@ def client_get_normal_model():
             model_id_mapping[key] = value
 
     print(model_id_mapping)
-    # # get encrypted model params
+    # get encrypted model params
     for model_id, encrypted_path in model_id_mapping.items():
         all_models_data[model_id] = {}
 
-        # 加载加密模型参数
+        # Load encrypted model parameters
         encrypted_data = np.load(encrypted_path, allow_pickle=True)
 
-        # 处理不同类型的NumPy数组
+        # Handle different types of NumPy arrays
         if isinstance(encrypted_data, np.ndarray) and encrypted_data.dtype == np.dtype('O'):
-            # 处理对象数组
+            # Handle object arrays
             if encrypted_data.ndim == 0:
-                # 0维对象数组 - 使用item()获取其中的字典
+                # 0-dimensional object array - use item() to get the dictionary inside
                 model_params = encrypted_data.item()
                 if not isinstance(model_params, dict):
-                    print(f"警告: 模型 {model_id} 的数据不是字典格式")
+                    print(f"Warning: Data for model {model_id} is not in dictionary format")
                     model_params = {"parameters": model_params}
             else:
-                # 多维对象数组 - 通常是数组的第一个元素
+                # Multi-dimensional object array - usually the first element of the array
                 if len(encrypted_data) > 0 and isinstance(encrypted_data[0], dict):
                     model_params = encrypted_data[0]
                 else:
-                    print(f"警告: 模型 {model_id} 的数据格式不是预期的字典数组")
+                    print(f"Warning: Data format for model {model_id} is not the expected dictionary array")
                     model_params = {"full_array": encrypted_data}
         else:
-            # 不是对象数组，可能是直接的数值数组
-            print(f"模型 {model_id} 的数据是简单数组格式")
+            # Not an object array, might be a direct numerical array
+            print(f"Data for model {model_id} is in simple array format")
             model_params = {"parameters": encrypted_data}
 
-            # 将参数添加到所有模型数据中
-        print(f"处理模型 {model_id}, 参数数量: {len(model_params)}")
+        # Add parameters to all model data
+        print(f"Processing model {model_id}, parameter count: {len(model_params)}")
         for name, param in model_params.items():
             all_models_data[model_id][name] = param
             if isinstance(param, np.ndarray):
-                print(f"  参数 {name}: 形状 {param.shape}, 类型 {param.dtype}")
+                print(f"  Parameter {name}: shape {param.shape}, type {param.dtype}")
 
     vmht_builder = VariableMerkleHahsTree()
-    # 增加traget_chunks可以增加树的构建开销
+    # Increasing target_chunks can increase tree building overhead
     VMHT, performance = vmht_builder.build_tree(all_models_data)
 
     with open(f"./client_verification_time_storage_costs_untamper.csv", 'w', newline="") as f:
@@ -65,18 +65,18 @@ def client_get_normal_model():
         client_request_model = model_id_str
         print(f"the client request {client_request_model} model")
 
-        # 使用参数块验证方法
+        # Using parameter block verification method
         try:
-            # 生成验证请求
+            # Generate verification request
             request = vmht_builder.generate_param_verification_request(client_request_model)
 
-            # 生成参数证明
+            # Generate parameter proof
             proof = vmht_builder.generate_param_proof(client_request_model)
 
             model_package_size = get_size(proof) / (1024 * 1024)
 
             print("\nthe client starts run verification operation:")
-            # 验证所有参数块
+            # Verify all parameter blocks
             results = VMHT.verify_params(proof, request)
 
             end_time = time.time()
@@ -88,7 +88,7 @@ def client_get_normal_model():
                     model_id_str,
                     total_time,
                     model_package_size,
-                    "成功" if results["success"] else "失败",
+                    "Success" if results["success"] else "Fail",
                     results["total_count"]
                 ])
 
@@ -99,7 +99,7 @@ def client_get_normal_model():
                   f"verified {results['success_count']}/{results['total_count']} blocks")
 
         except Exception as e:
-            print(f"验证模型 {model_id_str} 时出错: {str(e)}")
+            print(f"Error verifying model {model_id_str}: {str(e)}")
             traceback.print_exc()
 
     return all_models_data
@@ -107,5 +107,3 @@ def client_get_normal_model():
 
 if __name__ == "__main__":
     model_datas = client_get_normal_model()
-
-

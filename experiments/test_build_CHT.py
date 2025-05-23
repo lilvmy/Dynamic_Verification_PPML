@@ -35,40 +35,40 @@ def draw_time_storage_costs(filepath):
     plt.rcParams['font.family'] = 'DeJavu Serif'
     plt.rcParams['font.serif'] = ['Times New Roman']
 
-    # 读取CSV文件
+    # Read CSV file
     df = pd.read_csv(filepath)
     print("CSV columns:", df.columns.tolist())
 
-    # 定义所有可能模型的颜色映射
+    # Define color mapping for all possible models
     model_colors = {
-        'cnn1': '#1f77b4',  # 蓝色
-        'cnn2': '#ff7f0e',  # 橙色
-        'cnn3': '#2ca02c',  # 绿色
-        'cnn4': '#d62728',  # 红色
-        'cnn5': '#9467bd',  # 紫色
-        'lenet1': '#8c564b',  # 棕色
-        'lenet5': '#e377c2',  # 粉色
-        'alexnet': '#7f7f7f',  # 灰色
-        'vgg16': '#bcbd22',  # 橄榄绿
-        'resnet18': '#17becf'  # 青色
+        'cnn1': '#1f77b4',  # blue
+        'cnn2': '#ff7f0e',  # orange
+        'cnn3': '#2ca02c',  # green
+        'cnn4': '#d62728',  # red
+        'cnn5': '#9467bd',  # purple
+        'lenet1': '#8c564b',  # brown
+        'lenet5': '#e377c2',  # pink
+        'alexnet': '#7f7f7f',  # gray
+        'vgg16': '#bcbd22',  # olive green
+        'resnet18': '#17becf'  # cyan
     }
 
     # figure 1: time costs vs model name with stacked bars
     plt.figure(figsize=(7, 5))
 
-    # 获取x轴位置
+    # Get x-axis positions
     x_pos = np.arange(len(df))
     width = 0.2
 
     for idx, row in df.iterrows():
-        # 把模型名称拆分成列表
+        # Split model names into list
         models_in_bar = row['model_name'].split('+')
-        # 计算每个模型的份额 (均分时间成本)
+        # Calculate share for each model (equally divide time costs)
         model_share = row['time_costs'] / len(models_in_bar) * 1000
-        # 初始化底部位置
+        # Initialize bottom position
         bottom = 0
 
-        # 为每个模型绘制一段堆叠的条形
+        # Draw stacked bar segment for each model
         for model in models_in_bar:
             plt.bar(idx, model_share, width, bottom=bottom,
                     color=model_colors.get(model, 'gray'),
@@ -78,10 +78,10 @@ def draw_time_storage_costs(filepath):
     plt.xlabel('The number of models', fontsize=12, fontweight='bold')
     plt.ylabel('Time costs of building $\mathcal {DVT}$ (ms)', fontsize=12, fontweight='bold')
 
-    # 使用model_size作为x轴标签
+    # Use model_size as x-axis labels
     plt.xticks(x_pos, [f'{size}' for size in df['model_size']])
 
-    # 创建图例，但只显示唯一的模型名称
+    # Create legend, but only show unique model names
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys(), title="Model name",
@@ -95,14 +95,14 @@ def draw_time_storage_costs(filepath):
     plt.figure(figsize=(7, 5))
 
     for idx, row in df.iterrows():
-        # 把模型名称拆分成列表
+        # Split model names into list
         models_in_bar = row['model_name'].split('+')
-        # 计算每个模型的份额 (均分存储成本)
+        # Calculate share for each model (equally divide storage costs)
         model_share = row['storage_costs'] / len(models_in_bar)
-        # 初始化底部位置
+        # Initialize bottom position
         bottom = 0
 
-        # 为每个模型绘制一段堆叠的条形
+        # Draw stacked bar segment for each model
         for model in models_in_bar:
             plt.bar(idx, model_share, width, bottom=bottom,
                     color=model_colors.get(model, 'gray'),
@@ -112,10 +112,10 @@ def draw_time_storage_costs(filepath):
     plt.xlabel('The number of models', fontsize=12, fontweight='bold')
     plt.ylabel('Storage costs of building $\mathcal{DVT}$ (MB)', fontsize=12, fontweight='bold')
 
-    # 使用model_size作为x轴标签
+    # Use model_size as x-axis labels
     plt.xticks(x_pos, [f'{size}' for size in df['model_size']])
 
-    # 创建图例，但只显示唯一的模型名称
+    # Create legend, but only show unique model names
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plt.legend(by_label.values(), by_label.keys(), title="Model name",
@@ -171,7 +171,7 @@ def main():
                 key = model_keys[j]
                 subset_models_data[key] = all_models_data[key]
 
-                # Build model verification tree CHT for this subset
+        # Build model verification tree CHT for this subset
         start_time = time.time()
         model_tree = ChameleonHashTree(cht_keys)
         model_tree.build_from_model_params(subset_models_data, ecdsa_private_key)
@@ -187,12 +187,12 @@ def main():
             writer = csv.writer(f)
             writer.writerow([i, total_time, total_tree_size])
 
-        print(f"记录了实验数据: 模型数量={i}, 运行时间={total_time:.4f}s, 存储大小={total_tree_size:.2f}MB")
+        print(f"Recorded experiment data: model count={i}, runtime={total_time:.4f}s, storage size={total_tree_size:.2f}MB")
 
     return model_tree
 
 if __name__ == "__main__":
     # main()
 
-    # # draw time and storage costs for building CHT
+    # draw time and storage costs for building CHT
     draw_time_storage_costs("../table/CHT_time_storage_costs.csv")

@@ -34,17 +34,17 @@ def get_time_storage_costs_with_cloud_tamper():
         for name, param in encrypted_model_param.items():
             all_models_data[model_id][name] = param
 
-            # 使用所有可用模型
+    # Use all available models
     available_models = list(model_id_mapping.keys())
     model_count = len(available_models)
-    print(f"总共有 {model_count} 个可用模型: {available_models}")
+    print(f"Total {model_count} available models: {available_models}")
 
-    # 显示每个模型的参数数量
+    # Display parameter count for each model
     for model_id in available_models:
         param_count = len(all_models_data[model_id])
-        print(f"模型 {model_id} 有 {param_count} 个参数")
+        print(f"Model {model_id} has {param_count} parameters")
 
-        # Create CSV file with header
+    # Create CSV file with header
     with open(f"../table/time_storage_costs_with_cloud_tamper_client_specify_model.csv", 'w', newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -54,65 +54,65 @@ def get_time_storage_costs_with_cloud_tamper():
             'storage_costs',
         ])
 
-        # 对每个模型进行渐进式篡改测试
+    # Perform progressive tampering test for each model
     final_packages = None
     for model_index, model_id in enumerate(available_models, 1):
-        print(f"\n====== [{model_index}/{model_count}] 对模型 {model_id} 进行渐进式篡改测试 ======")
+        print(f"\n====== [{model_index}/{model_count}] Progressive tampering test for model {model_id} ======")
 
-        # 获取模型参数总数
+        # Get total parameter count for the model
         total_params = len(all_models_data[model_id])
-        print(f"模型 {model_id} 共有 {total_params} 个参数")
+        print(f"Model {model_id} has {total_params} parameters in total")
 
-        # 逐步增加篡改参数数量，从1到所有参数
+        # Gradually increase number of tampered parameters, from 1 to all parameters
         for tamper_count in range(1, total_params + 1):
-            print(f"\n--- 篡改模型 {model_id} 的前 {tamper_count}/{total_params} 个参数 ({tamper_count / total_params:.1%}) ---")
+            print(f"\n--- Tampering first {tamper_count}/{total_params} parameters of model {model_id} ({tamper_count / total_params:.1%}) ---")
 
             try:
-                # 每次测试都重新加载树和创建服务器实例，确保从原始状态开始
+                # Reload tree and create server instance for each test to ensure starting from original state
                 CHT = load_chameleon_hash_tree("../dual_verification_tree/tree/CHT_10.tree")
                 print(f"CHT load successfully {CHT}")
                 cloud_server = ModelCloudServer(HE, CHT, all_models_data)
                 client = ModelVerifier(cht_keys.get_public_key_set(), ecdsa_public_key)
 
-                # # 客户端注册所有模型参数
+                # # Client registers all model parameters
                 # for mid, params in all_models_data.items():
                 #     client.register_model(mid, params)
 
-                # 测量获取篡改模型的时间
+                # Measure time for getting tampered model
                 start_time = time.time()
-                # 每次都篡改从参数1到当前tamper_count的所有参数
+                # Always tamper parameters from 1 to current tamper_count
                 tampered_package = cloud_server.get_model(model_id, tamper_param_size=tamper_count, honest=False)
                 end_time = time.time()
                 get_model_time = (end_time - start_time) * 1000
 
-                # 测量验证时间
+                # Measure verification time
                 start_time = time.time()
                 results = client.verify_model(tampered_package)
                 end_time = time.time()
                 verification_time = (end_time - start_time) * 1000
 
-                # 计算总时间和存储成本
+                # Calculate total time and storage cost
                 total_time = get_model_time + verification_time
                 storage_cost = get_size(tampered_package) / (1024 * 1024)
 
-                # 计算失败的参数数量
+                # Calculate number of failed parameters
                 failed_params = sum(1 for r in results['params'].values() if not r['valid'])
 
-                # 验证结果
-                verification_result = '验证成功' if results['overall']['valid'] else '验证失败'
+                # Verification result
+                verification_result = 'Verification Successful' if results['overall']['valid'] else 'Verification Failed'
 
-                # 输出验证结果
-                print(f"验证结果:")
-                print(f"  验证签名: {'成功' if results['signature']['valid'] else '失败'}")
-                print(f"  验证模型路径: {'成功' if results['model_path']['valid'] else '失败'}")
-                print(f"  参数验证: {len(results['params']) - failed_params} 个成功, {failed_params} 个失败")
-                print(f"  整体结果: {verification_result}")
-                print(f"  获取模型时间: {get_model_time:.2f} ms")
-                print(f"  验证时间: {verification_time:.2f} ms")
-                print(f"  总时间: {total_time:.2f} ms")
-                print(f"  存储成本: {storage_cost:.2f} MB")
+                # Output verification results
+                print(f"Verification results:")
+                print(f"  Signature verification: {'Success' if results['signature']['valid'] else 'Failed'}")
+                print(f"  Model path verification: {'Success' if results['model_path']['valid'] else 'Failed'}")
+                print(f"  Parameter verification: {len(results['params']) - failed_params} successful, {failed_params} failed")
+                print(f"  Overall result: {verification_result}")
+                print(f"  Get model time: {get_model_time:.2f} ms")
+                print(f"  Verification time: {verification_time:.2f} ms")
+                print(f"  Total time: {total_time:.2f} ms")
+                print(f"  Storage cost: {storage_cost:.2f} MB")
 
-                # 记录数据到CSV
+                # Record data to CSV
                 with open(f"../table/time_storage_costs_with_cloud_tamper_client_specify_model.csv", 'a', newline='') as f:
                     writer = csv.writer(f)
                     writer.writerow([
@@ -122,16 +122,16 @@ def get_time_storage_costs_with_cloud_tamper():
                         storage_cost
                     ])
 
-                    # 保存最后一次测试的包用于返回
+                # Save last test package for return
                 final_packages = tampered_package
 
             except Exception as e:
-                print(f"错误: 测试模型 {model_id} 篡改 {tamper_count} 个参数时出现异常: {str(e)}")
-                print(f"将跳过这个测试点并继续")
+                print(f"Error: Exception occurred while testing model {model_id} with {tamper_count} tampered parameters: {str(e)}")
+                print(f"Will skip this test point and continue")
                 traceback.print_exc()
                 continue
 
-    print("\n====== 全部模型渐进式篡改测试完成 ======")
+    print("\n====== All model progressive tampering tests completed ======")
     return final_packages
 
 def draw_time_storage_costs(filepath):
@@ -205,4 +205,3 @@ if __name__ == "__main__":
     res = get_time_storage_costs_with_cloud_tamper()
 
     draw_time_storage_costs("../table/time_storage_costs_with_cloud_tamper_client_specify_model.csv")
-

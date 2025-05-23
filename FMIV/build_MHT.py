@@ -1,3 +1,4 @@
+
 import numpy as np
 import hashlib
 import time
@@ -13,33 +14,33 @@ import pickle
 
 
 class MHTNode:
-    """Merkle Hash Tree节点"""
+    """Merkle Hash Tree Node"""
 
     def __init__(self):
-        """初始化MHT节点"""
-        self.hash_value = None  # 节点哈希值
-        self.is_leaf = False  # 是否为叶节点
-        self.data = None  # 叶节点数据
-        self.left = None  # 左子节点
-        self.right = None  # 右子节点
-        self.parent = None  # 父节点
+        """Initialize MHT Node"""
+        self.hash_value = None  # Node hash value
+        self.is_leaf = False  # Whether it's a leaf node
+        self.data = None  # Leaf node data
+        self.left = None  # Left child node
+        self.right = None  # Right child node
+        self.parent = None  # Parent node
         self.secure_code = None
-        # 用于可视化和调试
-        self.param_id = None  # 参数ID (对叶节点)
-        self.model_id = None  # 模型ID (对模型子树根节点)
-        self.block_idx = None  # 参数块的索引
+        # For visualization and debugging
+        self.param_id = None  # Parameter ID (for leaf nodes)
+        self.model_id = None  # Model ID (for model subtree root nodes)
+        self.block_idx = None  # Index of parameter block
 
 
 class MerkleHashTree:
-    """基于SHA-256的Merkle哈希树实现"""
+    """SHA-256 based Merkle Hash Tree implementation"""
 
     def __init__(self):
-        """初始化Merkle哈希树"""
+        """Initialize Merkle Hash Tree"""
         self.root = None
         self.model_trees = {}  # {model_id: model_root_node}
-        self.model_params = {}  # {model_id: {param_id: [leaf_nodes]}} - 保存每个参数的所有块节点
-        self.param_blocks_data = {}  # {model_id: {param_id: [block1, block2, ...]}} - 存储每个参数的分块数据
-        self.param_blocks_count = {}  # {model_id: {param_id: num_blocks}} - 存储每个参数的块数
+        self.model_params = {}  # {model_id: {param_id: [leaf_nodes]}} - save all block nodes for each parameter
+        self.param_blocks_data = {}  # {model_id: {param_id: [block1, block2, ...]}} - store chunked data for each parameter
+        self.param_blocks_count = {}  # {model_id: {param_id: num_blocks}} - store block count for each parameter
         self.timestamp = None
         self.version = None
         self.node_count = 0
@@ -53,13 +54,13 @@ class MerkleHashTree:
 
     def secure_hash(self, data):
         """
-        计算数据的安全哈希值
+        Calculate secure hash value of data
 
-        参数:
-            data: 要哈希的数据
+        Args:
+            data: Data to be hashed
 
-        返回:
-            str: 数据的十六进制哈希值
+        Returns:
+            str: Hexadecimal hash value of data
         """
         if isinstance(data, np.ndarray):
             data_bytes = data.tobytes()
@@ -70,40 +71,40 @@ class MerkleHashTree:
         else:
             data_bytes = str(data).encode('UTF-8')
 
-            # 初始化SHA-256哈希函数
+            # Initialize SHA-256 hash function
         sha256 = hashlib.sha256()
 
-        # 更新哈希函数
+        # Update hash function
         sha256.update(data_bytes)
 
-        # 返回十六进制摘要
+        # Return hexadecimal digest
         return sha256.hexdigest()
 
     def generate_secure_code(self, f=None):
         """
-        生成安全随机码
+        Generate secure random code
 
-        参数:
-            f: 前一个安全码(可选)
+        Args:
+            f: Previous secure code (optional)
 
-        返回:
-            str: 介于1到10000之间的随机整数字符串
+        Returns:
+            str: Random integer string between 1 and 10000
         """
-        # 生成随机整数
+        # Generate random integer
         random_int = random.randint(1, 10000)
 
-        # 转换为字符串并返回
+        # Convert to string and return
         return str(random_int)
 
     def encrypt_root_hash(self, root_hash):
         """
-        使用RSA加密根哈希值
+        Encrypt root hash using RSA
 
-        参数:
-            root_hash: 根哈希值
+        Args:
+            root_hash: Root hash value
 
-        返回:
-            bytes: 加密后的哈希值
+        Returns:
+            bytes: Encrypted hash value
         """
         if isinstance(root_hash, str):
             root_hash_bytes = root_hash.encode('UTF-8')
@@ -112,7 +113,7 @@ class MerkleHashTree:
         else:
             root_hash_bytes = str(root_hash).encode('UTF-8')
 
-            # 使用RSA公钥加密
+            # Encrypt using RSA public key
         encrypted_hash = self.public_key.encrypt(
             root_hash_bytes,
             padding.OAEP(
@@ -126,20 +127,20 @@ class MerkleHashTree:
 
     def build_mht(self, data_blocks, f=None):
         """
-        构建Merkle哈希树
+        Build Merkle Hash Tree
 
-        参数:
-            data_blocks: 数据块列表 [(model_id, param_id, block_idx, data), ...]
-            f: 安全码(可选)
+        Args:
+            data_blocks: Data block list [(model_id, param_id, block_idx, data), ...]
+            f: Secure code (optional)
 
-        返回:
-            MHTNode: 树的根节点
+        Returns:
+            MHTNode: Root node of the tree
         """
-        # 如果没有数据块，返回None
+        # Return None if no data blocks
         if not data_blocks:
             return None
 
-            # 如果只有一个数据块，直接创建叶子节点
+            # If only one data block, directly create leaf node
         if len(data_blocks) == 1:
             model_id, param_id, block_idx, data = data_blocks[0]
             leaf_node = MHTNode()
@@ -151,7 +152,7 @@ class MerkleHashTree:
             leaf_node.block_idx = block_idx
             return leaf_node
 
-            # 创建所有叶子节点
+            # Create all leaf nodes
         leaf_nodes = []
         for model_id, param_id, block_idx, data in data_blocks:
             leaf_node = MHTNode()
@@ -163,50 +164,50 @@ class MerkleHashTree:
             leaf_node.block_idx = block_idx
             leaf_nodes.append(leaf_node)
 
-            # 递归构建上层节点
+            # Recursively build upper layer nodes
         return self._build_tree_from_nodes(leaf_nodes, f)
 
     def _build_tree_from_nodes(self, nodes, f=None):
         """
-        从节点列表构建树
+        Build tree from node list
 
-        参数:
-            nodes: 节点列表
-            f: 安全码
+        Args:
+            nodes: Node list
+            f: Secure code
 
-        返回:
-            MHTNode: 根节点
+        Returns:
+            MHTNode: Root node
         """
-        # 基本情况：只有一个节点时返回该节点
+        # Base case: return the node when there's only one node
         if len(nodes) == 1:
             return nodes[0]
 
-            # 成对处理节点
+            # Process nodes in pairs
         parent_nodes = []
 
         for i in range(0, len(nodes), 2):
             left_node = nodes[i]
 
-            # 检查是否有右节点
+            # Check if there's a right node
             right_node = nodes[i + 1] if i + 1 < len(nodes) else None
 
-            # 生成安全码
+            # Generate secure code
             if f is None:
                 secure_code = self.generate_secure_code()
             else:
                 secure_code = f
 
-            # 创建父节点
+            # Create parent node
             parent = MHTNode()
             parent.left = left_node
             parent.right = right_node
 
-            # 连接父子关系
+            # Connect parent-child relationships
             left_node.parent = parent
             if right_node:
                 right_node.parent = parent
 
-                # 计算组合哈希值
+                # Calculate combined hash value
             if right_node:
                 combined_data = str(left_node.hash_value) + str(right_node.hash_value) + secure_code
             else:
@@ -215,30 +216,30 @@ class MerkleHashTree:
             parent.hash_value = self.secure_hash(combined_data)
             parent.secure_code = secure_code
 
-            # 添加到父节点列表
+            # Add to parent node list
             parent_nodes.append(parent)
 
-            # 递归构建上层树
+            # Recursively build upper layer tree
         return self._build_tree_from_nodes(parent_nodes, secure_code)
 
     def chunk_parameters(self, params_array, chunk_size):
         """
-        将参数数组分割成固定大小的块
+        Split parameter array into fixed-size chunks
 
-        参数:
-            params_array: 参数数组
-            chunk_size: 每个块的大小
+        Args:
+            params_array: Parameter array
+            chunk_size: Size of each chunk
 
-        返回:
-            chunks: 参数块列表
-            time_taken: 分块操作耗时
+        Returns:
+            chunks: List of parameter chunks
+            time_taken: Time taken for chunking operation
         """
         start_time = time.time()
 
-        # 分割参数数组
+        # Split parameter array
         if isinstance(params_array, np.ndarray):
-            # 使用NumPy的数组分割操作
-            # 确保使用flatten()将数组展平
+            # Use NumPy array splitting operations
+            # Ensure using flatten() to flatten the array
             flat_array = params_array.flatten()
             total_elements = len(flat_array)
             num_chunks = int(np.ceil(total_elements / chunk_size))
@@ -249,68 +250,68 @@ class MerkleHashTree:
                 end_idx = min(start_idx + chunk_size, total_elements)
                 chunks.append(flat_array[start_idx:end_idx])
         else:
-            # 处理非NumPy数组的情况
+            # Handle non-NumPy array cases
             chunks = [params_array[i:i + chunk_size] for i in range(0, len(params_array), chunk_size)]
 
         time_taken = time.time() - start_time
 
-        print(f"参数分块完成，生成 {len(chunks)} 个块，耗时 {time_taken:.4f} 秒")
+        print(f"Parameter chunking completed, generated {len(chunks)} chunks, took {time_taken:.4f} seconds")
 
         return chunks, time_taken
 
     def determine_chunk_size(self, params_array, target_chunks=16):
         """
-        确定参数分块的最佳大小
+        Determine optimal size for parameter chunking
 
-        参数:
-            params_array: 待分块的参数数组
-            target_chunks: 目标块数量（默认16块）
+        Args:
+            params_array: Parameter array to be chunked
+            target_chunks: Target number of chunks (default 16 chunks)
 
-        返回:
-            chunk_size: 每个块的大小
-            num_chunks: 实际的块数量
+        Returns:
+            chunk_size: Size of each chunk
+            num_chunks: Actual number of chunks
         """
         if isinstance(params_array, np.ndarray):
             total_elements = params_array.size
         else:
             total_elements = len(params_array)
 
-            # 计算块大小，向上取整确保所有参数都包含在内
+            # Calculate chunk size, round up to ensure all parameters are included
         chunk_size = max(1, int(np.ceil(total_elements / target_chunks)))
 
-        # 计算实际块数
+        # Calculate actual number of chunks
         num_chunks = int(np.ceil(total_elements / chunk_size))
 
-        print(f"参数总数: {total_elements}, 目标块数: {target_chunks}")
-        print(f"计算的块大小: {chunk_size}, 实际块数: {num_chunks}")
+        print(f"Total parameters: {total_elements}, target chunks: {target_chunks}")
+        print(f"Calculated chunk size: {chunk_size}, actual chunks: {num_chunks}")
 
         return chunk_size, num_chunks
 
     def build_from_model_params(self, all_model_params: Dict[str, Dict[str, np.ndarray]], target_chunks=16):
         """
-        从模型参数构建Merkle哈希树并加密根哈希
+        Build Merkle Hash Tree from model parameters and encrypt root hash
 
-        参数:
-            all_model_params: 字典 {model_id: {param_id: param_data}}
-            target_chunks: 每个参数的目标块数
+        Args:
+            all_model_params: Dictionary {model_id: {param_id: param_data}}
+            target_chunks: Target number of chunks for each parameter
 
-        返回:
-            dict: 性能统计字典
+        Returns:
+            dict: Performance statistics dictionary
         """
         start_time = time.time()
         memory_before = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024  # MB
 
-        print(f"构建MHT，包含 {len(all_model_params)} 个模型")
+        print(f"Building MHT, including {len(all_model_params)} models")
 
-        # 初始化参数块计数和存储
+        # Initialize parameter block count and storage
         self.param_blocks_count = {}
         self.param_blocks_data = {}
         self.model_params = {}
 
-        # 转换所有模型参数为叶子数据块
+        # Convert all model parameters to leaf data blocks
         all_data_blocks = []
 
-        # 首先为每个模型参数分块
+        # First chunk each model parameter
         for model_id in all_model_params.keys():
             model_params = all_model_params[model_id]
             self.param_blocks_count[model_id] = {}
@@ -322,69 +323,69 @@ class MerkleHashTree:
                 self.param_blocks_data[model_id][param_id] = []
 
                 if isinstance(param_data, np.ndarray):
-                    # 将大型数组展平后分块
+                    # Flatten large arrays then chunk
                     flat_params = param_data.flatten()
                     chunk_size, num_chunks = self.determine_chunk_size(flat_params, target_chunks)
                     chunks, _ = self.chunk_parameters(flat_params, chunk_size)
 
-                    # 保存块数量
+                    # Save number of chunks
                     self.param_blocks_count[model_id][param_id] = len(chunks)
 
-                    # 将每个块添加到参数块列表和全局数据块列表
+                    # Add each chunk to parameter block list and global data block list
                     for i, chunk in enumerate(chunks):
                         block_data = chunk.tobytes()
                         self.param_blocks_data[model_id][param_id].append(block_data)
                         all_data_blocks.append((model_id, param_id, i, block_data))
                 else:
-                    # 非数组类型也分块处理
+                    # Also chunk non-array types
                     data_str = str(param_data)
                     chunk_size, num_chunks = self.determine_chunk_size(data_str, target_chunks)
                     chunks = [data_str[i:i + chunk_size] for i in range(0, len(data_str), chunk_size)]
 
-                    # 保存块数量
+                    # Save number of chunks
                     self.param_blocks_count[model_id][param_id] = len(chunks)
 
-                    # 将每个块添加到参数块列表和全局数据块列表
+                    # Add each chunk to parameter block list and global data block list
                     for i, chunk in enumerate(chunks):
                         block_data = chunk.encode('UTF-8')
                         self.param_blocks_data[model_id][param_id].append(block_data)
                         all_data_blocks.append((model_id, param_id, i, block_data))
 
-        print(f"总共 {len(all_data_blocks)} 个数据块准备构建树")
+        print(f"Total {len(all_data_blocks)} data blocks ready for tree building")
 
-        # 使用安全码生成初始值
+        # Use secure code to generate initial value
         initial_secure_code = self.generate_secure_code()
 
-        # 构建整个树
+        # Build the entire tree
         self.root = self.build_mht(all_data_blocks, initial_secure_code)
 
-        # 更新模型参数节点映射 - 在树构建后处理
+        # Update model parameter node mapping - process after tree building
         self._update_model_params_mapping(self.root)
 
-        # 记录时间戳和版本
+        # Record timestamp and version
         self.timestamp = int(time.time())
         self.version = 1
 
-        # 获取根哈希
+        # Get root hash
         root_hash = self.root.hash_value
 
-        # 加密根哈希
+        # Encrypt root hash
         encrypted_hash = self.encrypt_root_hash(root_hash)
 
         total_time = (time.time() - start_time)
         memory_after = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024  # MB
         memory_used = memory_after - memory_before
 
-        # 计算存储大小
+        # Calculate storage size
         tree_size = self._calculate_tree_size()
 
-        print(f"\n树的构建成功！")
-        print(f"根哈希值: 0x{root_hash[:16] if isinstance(root_hash, str) else root_hash.hex()[:16]}...")
-        print(f"用时: {total_time:.4f}秒")
-        print(f"内存使用: {memory_used:.2f}MB")
-        print(f"树大小: {tree_size / (1024 * 1024):.2f}MB")
+        print(f"\nTree building successful!")
+        print(f"Root hash value: 0x{root_hash[:16] if isinstance(root_hash, str) else root_hash.hex()[:16]}...")
+        print(f"Time taken: {total_time:.4f} seconds")
+        print(f"Memory usage: {memory_used:.2f}MB")
+        print(f"Tree size: {tree_size / (1024 * 1024):.2f}MB")
 
-        # 记录性能统计
+        # Record performance statistics
         performance = {
             "total_blocks": len(all_data_blocks),
             "build_time_sec": total_time,
@@ -397,16 +398,16 @@ class MerkleHashTree:
 
     def _update_model_params_mapping(self, node):
         """
-        更新模型参数到叶节点的映射
+        Update mapping from model parameters to leaf nodes
 
-        参数:
-            node: 开始搜索的节点
+        Args:
+            node: Node to start searching from
         """
         if node is None:
             return
 
         if node.is_leaf:
-            # 找到叶节点，更新映射
+            # Found leaf node, update mapping
             if node.model_id and node.param_id is not None:
                 if node.model_id not in self.model_params:
                     self.model_params[node.model_id] = {}
@@ -414,15 +415,15 @@ class MerkleHashTree:
                 if node.param_id not in self.model_params[node.model_id]:
                     self.model_params[node.model_id][node.param_id] = []
 
-                    # 添加叶节点到参数映射
+                    # Add leaf node to parameter mapping
                 self.model_params[node.model_id][node.param_id].append(node)
         else:
-            # 递归处理子节点
+            # Recursively process child nodes
             self._update_model_params_mapping(node.left)
             self._update_model_params_mapping(node.right)
 
     def _calculate_tree_size(self):
-        """计算树的总大小（字节）"""
+        """Calculate total size of the tree (in bytes)"""
         if not self.root:
             return 0
 
@@ -438,18 +439,18 @@ class MerkleHashTree:
 
             visited.add(id(node))
 
-            # 计算节点大小
+            # Calculate node size
             node_size = sys.getsizeof(node)
 
-            # 添加哈希值大小
+            # Add hash value size
             if node.hash_value:
                 node_size += sys.getsizeof(node.hash_value)
 
-                # 添加安全码大小
+                # Add secure code size
             if node.secure_code:
                 node_size += sys.getsizeof(node.secure_code)
 
-                # 添加数据大小（如果是叶节点）
+                # Add data size (if leaf node)
             if node.is_leaf and node.data:
                 if isinstance(node.data, np.ndarray):
                     node_size += node.data.nbytes
@@ -458,7 +459,7 @@ class MerkleHashTree:
 
             total_size += node_size
 
-            # 添加子节点
+            # Add child nodes
             if node.left:
                 stack.append(node.left)
             if node.right:
@@ -468,20 +469,20 @@ class MerkleHashTree:
 
     def save_to_file(self, output_file, include_public_key=True):
         """
-        将MHT的元数据保存到文件
+        Save MHT metadata to file
 
-        参数:
-            output_file: 输出文件路径
-            include_public_key: 是否包含公钥
+        Args:
+            output_file: Output file path
+            include_public_key: Whether to include public key
         """
         if not self.root:
-            print("错误：树为空，无法保存")
+            print("Error: Tree is empty, cannot save")
             return
 
-            # 将根哈希加密
+            # Encrypt root hash
         encrypted_hash = self.encrypt_root_hash(self.root.hash_value)
 
-        # 创建可序列化的树表示
+        # Create serializable tree representation
         tree_data = {
             'timestamp': self.timestamp,
             'version': self.version,
@@ -491,7 +492,7 @@ class MerkleHashTree:
             'param_blocks_count': self.param_blocks_count
         }
 
-        # 添加公钥（如果需要）
+        # Add public key (if needed)
         if include_public_key:
             tree_data['public_key_pem'] = self.public_key.public_bytes(
                 encoding=serialization.Encoding.PEM,
@@ -501,30 +502,30 @@ class MerkleHashTree:
         with open(output_file, 'w') as f:
             json.dump(tree_data, f, indent=2)
 
-        print(f"MHT元数据已保存到 {output_file}")
+        print(f"MHT metadata saved to {output_file}")
 
     def get_model_proof(self, model_id_str: str) -> Dict[str, Any]:
         """
-        获取模型的证明路径
+        Get proof path for a model
         """
         if model_id_str not in self.model_params:
-            raise ValueError(f"模型 {model_id_str} 不存在")
+            raise ValueError(f"Model {model_id_str} does not exist")
 
         model_params = self.model_params[model_id_str]
         blocks_data = self.param_blocks_data[model_id_str]
 
-        # 构建模型参数证明
+        # Build model parameter proof
         params_data = {}
         params_proofs = {}
 
         for param_id, leaf_nodes in model_params.items():
-            # 对叶节点按块索引排序
+            # Sort leaf nodes by block index
             sorted_nodes = sorted(leaf_nodes, key=lambda x: x.block_idx)
 
-            # 为每个块构建证明路径
+            # Build proof path for each block
             blocks_proofs = []
             for node in sorted_nodes:
-                # 获取从叶节点到根的证明路径
+                # Get proof path from leaf node to root
                 proof_path = []
                 current = node
 
@@ -546,15 +547,15 @@ class MerkleHashTree:
                     'proof': proof_path
                 })
 
-                # 将块排序并保存参数数据
+                # Sort blocks and save parameter data
             params_data[param_id] = blocks_data[param_id]
 
-            # 保存参数的所有块证明路径
+            # Save all block proof paths for the parameter
             params_proofs[param_id] = blocks_proofs
 
         return {
             'model_id': model_id_str,
-            'params': params_data,  # 这是一个字典，键为param_id，值为块列表
+            'params': params_data,  # This is a dictionary with param_id as key and block list as value
             'params_proofs': params_proofs,
             'global_root_hash': self.root.hash_value,
             'timestamp': self.timestamp,
@@ -564,97 +565,97 @@ class MerkleHashTree:
 
     def verify_model_proof(self, proof: Dict[str, Any]) -> bool:
         """
-        验证模型证明
+        Verify model proof
 
-        参数:
-            proof: 通过get_model_proof获取的证明
+        Args:
+            proof: Proof obtained through get_model_proof
 
-        返回:
-            bool: 验证是否成功
+        Returns:
+            bool: Whether verification was successful
         """
-        # 提取证明信息
+        # Extract proof information
         model_id = proof['model_id']
         global_root_hash = proof['global_root_hash']
         params = proof['params']  # {param_id: [block1, block2, ...]}
         params_proofs = proof['params_proofs']
         param_blocks_count = proof.get('param_blocks_count', {})
 
-        # 验证每个参数
+        # Verify each parameter
         for param_id, param_blocks in params.items():
             if param_id not in params_proofs:
-                print(f"参数 {param_id} 的证明缺失")
+                print(f"Proof for parameter {param_id} is missing")
                 return False
 
             blocks_proofs = params_proofs[param_id]
 
-            # 验证块数量
+            # Verify block count
             if param_id in param_blocks_count and len(blocks_proofs) != param_blocks_count[param_id]:
-                print(f"参数 {param_id} 的块数不匹配: 期望 {param_blocks_count[param_id]}, 实际 {len(blocks_proofs)}")
+                print(f"Block count mismatch for parameter {param_id}: expected {param_blocks_count[param_id]}, actual {len(blocks_proofs)}")
                 return False
 
-                # 验证每个块
+                # Verify each block
             for proof_item in blocks_proofs:
                 block_idx = proof_item['block_idx']
 
                 if block_idx >= len(param_blocks):
-                    print(f"块索引 {block_idx} 超出范围")
+                    print(f"Block index {block_idx} out of range")
                     return False
 
                 block_data = param_blocks[block_idx]
 
-                # 计算叶节点哈希
+                # Calculate leaf node hash
                 leaf_hash = self.secure_hash(block_data)
 
-                # 按照证明路径逐步验证
+                # Verify step by step according to proof path
                 current_hash = leaf_hash
                 for step in proof_item['proof']:
                     sibling_hash = step['hash']
                     secure_code = step.get('secure_code', '')
 
                     if step['position'] == 'left':
-                        # 当前节点在右侧
+                        # Current node is on the right
                         combined = sibling_hash + current_hash + secure_code
                     else:
-                        # 当前节点在左侧
+                        # Current node is on the left
                         combined = current_hash + sibling_hash + secure_code
 
                     current_hash = self.secure_hash(combined)
 
-                    # 验证是否最终得到全局根哈希
+                    # Verify if we finally get the global root hash
                 if current_hash != global_root_hash:
-                    print(f"参数 {param_id} 块 {block_idx} 证明验证失败")
+                    print(f"Proof verification failed for parameter {param_id} block {block_idx}")
                     return False
 
         return True
 
 def save_merkle_hash_tree(model_tree, filepath):
-    # 确保目录存在
+    # Ensure directory exists
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
     try:
-        # 使用pickle序列化对象并保存
+        # Serialize object using pickle and save
         with open(filepath, 'wb') as f:
             pickle.dump(model_tree, f, protocol=pickle.HIGHEST_PROTOCOL)
-        print(f"ChameleonHashTree成功保存到: {filepath}")
+        print(f"ChameleonHashTree successfully saved to: {filepath}")
         return True
     except Exception as e:
-        print(f"保存ChameleonHashTree时出错: {e}")
+        print(f"Error saving ChameleonHashTree: {e}")
         return False
 
 
 def load_merkle_hash_tree(filepath):
     if not os.path.exists(filepath):
-        print(f"错误: 文件不存在 {filepath}")
+        print(f"Error: File does not exist {filepath}")
         return None
 
     try:
-        # 使用pickle加载对象
+        # Load object using pickle
         with open(filepath, 'rb') as f:
             model_tree = pickle.load(f)
-        print(f"ChameleonHashTree成功从 {filepath} 加载")
+        print(f"ChameleonHashTree successfully loaded from {filepath}")
         return model_tree
     except Exception as e:
-        print(f"加载ChameleonHashTree时出错: {e}")
+        print(f"Error loading ChameleonHashTree: {e}")
         return None
 
 
@@ -673,42 +674,42 @@ def get_MHT_multi_model():
     for model_id, encrypted_path in model_id_mapping.items():
         all_models_data[model_id] = {}
 
-        # 加载加密模型参数
+        # Load encrypted model parameters
         encrypted_data = np.load(encrypted_path, allow_pickle=True)
 
-        # 处理不同类型的NumPy数组
+        # Handle different types of NumPy arrays
         if isinstance(encrypted_data, np.ndarray) and encrypted_data.dtype == np.dtype('O'):
-            # 处理对象数组
+            # Handle object arrays
             if encrypted_data.ndim == 0:
-                # 0维对象数组 - 使用item()获取其中的字典
+                # 0-dimensional object array - use item() to get the dictionary inside
                 model_params = encrypted_data.item()
                 if not isinstance(model_params, dict):
-                    print(f"警告: 模型 {model_id} 的数据不是字典格式")
+                    print(f"Warning: Data for model {model_id} is not in dictionary format")
                     model_params = {"parameters": model_params}
             else:
-                # 多维对象数组 - 通常是数组的第一个元素
+                # Multi-dimensional object array - usually the first element of the array
                 if len(encrypted_data) > 0 and isinstance(encrypted_data[0], dict):
                     model_params = encrypted_data[0]
                 else:
-                    print(f"警告: 模型 {model_id} 的数据格式不是预期的字典数组")
+                    print(f"Warning: Data format for model {model_id} is not the expected dictionary array")
                     model_params = {"full_array": encrypted_data}
         else:
-            # 不是对象数组，可能是直接的数值数组
-            print(f"模型 {model_id} 的数据是简单数组格式")
+            # Not an object array, might be a direct numerical array
+            print(f"Data for model {model_id} is in simple array format")
             model_params = {"parameters": encrypted_data}
 
-            # 将参数添加到所有模型数据中
-        print(f"处理模型 {model_id}, 参数数量: {len(model_params)}")
+            # Add parameters to all model data
+        print(f"Processing model {model_id}, parameter count: {len(model_params)}")
         for name, param in model_params.items():
             all_models_data[model_id][name] = param
             if isinstance(param, np.ndarray):
-                print(f"  参数 {name}: 形状 {param.shape}, 类型 {param.dtype}")
+                print(f"  Parameter {name}: shape {param.shape}, type {param.dtype}")
 
     mht_builder = MerkleHashTree()
-    # 增加traget_chunks可以增加树的构建开销
+    # Increasing target_chunks can increase tree building overhead
     MHT, performance = mht_builder.build_from_model_params(all_models_data, target_chunks=18024)
 
-    # 保存MHT元数据
+    # Save MHT metadata
     mht_builder.save_to_file("mht_metadata.json")
 
     save_merkle_hash_tree(MHT, "./MHT_8.tree")

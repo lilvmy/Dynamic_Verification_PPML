@@ -15,7 +15,7 @@ from initialization.setup import load_HE_keys
 
 def get_memory_usage():
     """
-    返回内存使用量(MB)
+    Return memory usage in MB
     """
     process = psutil.Process(os.getpid())
     return process.memory_info().rss / (1024 * 1024)
@@ -23,24 +23,24 @@ def get_memory_usage():
 
 def binary_mean_representation(param):
     """
-    将参数表示为二进制形式并计算均值
+    Represent parameter in binary form and calculate mean
     """
-    # 二进制表示(>0为1，否则为0)
+    # Binary representation (>0 is 1, otherwise 0)
     binary = (param > 0).astype(np.float32)
 
-    # 计算均值
+    # Calculate mean
     binary_mean = np.mean(binary)
 
-    # 计算正值和负值的均值用于重建参数
+    # Calculate mean of positive and negative values for parameter reconstruction
     if np.any(param > 0):
         positive_mean = np.mean(param[param > 0])
     else:
-        positive_mean = 0.1  # 默认值
+        positive_mean = 0.1  # Default value
 
     if np.any(param <= 0):
         negative_mean = np.mean(param[param <= 0])
     else:
-        negative_mean = -0.1  # 默认值
+        negative_mean = -0.1  # Default value
 
     return {
         'binary_mean': binary_mean,
@@ -52,9 +52,9 @@ def binary_mean_representation(param):
 
 def extract_param_features(param, name):
     """
-    提取参数的特征，确保不同参数有唯一标识
+    Extract parameter features to ensure different parameters have unique identifiers
     """
-    # 基本统计信息
+    # Basic statistical information
     features = {
         'name': name,
         'shape': param.shape,
@@ -67,17 +67,17 @@ def extract_param_features(param, name):
         'sparsity': float(np.sum(param == 0) / param.size)
     }
 
-    # 添加分位数信息
+    # Add percentile information
     percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99]
     for p in percentiles:
         features[f'percentile_{p}'] = float(np.percentile(param, p))
 
-        # 添加直方图特征
+    # Add histogram features
     hist, bin_edges = np.histogram(param, bins=10)
     features['histogram'] = hist.tolist()
     features['histogram_bins'] = bin_edges.tolist()
 
-    # 添加前几个和最后几个元素的哈希（用于唯一性）
+    # Add hash of first few and last few elements (for uniqueness)
     first_elements = param.flatten()[:20].tolist()
     last_elements = param.flatten()[-20:].tolist()
     features['sample_elements'] = first_elements + last_elements
@@ -87,9 +87,9 @@ def extract_param_features(param, name):
 
 def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
     """
-    处理模型参数用于chameleon hash tree的叶子节点，确保每个模型参数有唯一标识
+    Process model parameters for chameleon hash tree leaf nodes, ensuring each model parameter has unique identifier
     """
-    # 确保输出目录存在
+    # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
     print("Loading HE keys...")
@@ -102,27 +102,27 @@ def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
     param_names = list(model.keys())
     print(f"Found {len(param_names)} parameters")
 
-    # 构建处理后的模型参数字典
+    # Build processed model parameter dictionary
     processed_model = {}
 
-    # 创建模型指纹用于全局标识
+    # Create model fingerprint for global identification
     model_fingerprint = hashlib.sha256()
     for name, param in model.items():
-        # 将参数的关键统计信息添加到模型指纹
+        # Add parameter's key statistical information to model fingerprint
         param_info = f"{name}:{param.shape}:{np.mean(param)}:{np.std(param)}"
         model_fingerprint.update(param_info.encode())
 
-    # 模型的全局唯一标识
+    # Global unique identifier for the model
     model_id = model_fingerprint.hexdigest()
     processed_model['__model_id__'] = model_id
     print(f"Model ID: {model_id}")
 
-    # 处理每个参数
+    # Process each parameter
     for name in param_names:
         print(f"Processing parameter: {name}")
         param = model[name]
 
-        # 获取二进制均值信息
+        # Get binary mean information
         binary_info = binary_mean_representation(param)
         binary_mean = binary_info['binary_mean']
 
@@ -131,50 +131,50 @@ def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
         print(f"  Positive elements mean: {binary_info['positive_mean']:.4f}")
         print(f"  Negative elements mean: {binary_info['negative_mean']:.4f}")
 
-        # 提取参数特征
+        # Extract parameter features
         param_features = extract_param_features(param, name)
 
-        # 将特征转换为字节
+        # Convert features to bytes
         feature_bytes = pickle.dumps(param_features)
 
-        # 将每个参数表示为二进制均值，并进行加密
+        # Represent each parameter as binary mean and encrypt
         encrypted_mean = HE.encode_number(binary_mean)
         encrypted_bytes = encrypted_mean.to_bytes()
 
-        # 计算特征字节长度
+        # Calculate feature bytes length
         feature_length = len(feature_bytes)
         print(f"  Feature data size: {feature_length} bytes")
         print(f"  Encrypted data size: {len(encrypted_bytes)} bytes")
 
-        # 将特征和加密数据合并，前4字节存储特征长度
+        # Combine features and encrypted data, first 4 bytes store feature length
         combined_data = feature_length.to_bytes(4, byteorder='big') + feature_bytes + encrypted_bytes
 
-        # 存储合并后的数据
+        # Store combined data
         processed_model[name] = combined_data
 
-    # 添加模型结构信息
+    # Add model structure information
     model_structure = {name: str(param.shape) for name, param in model.items()}
     processed_model['__model_structure__'] = pickle.dumps(model_structure)
 
     model_name = os.path.basename(model_path).replace('.npy', '')
     output_file = os.path.join(output_dir, f"{model_name}_hash_node.zpkl")
 
-    # 使用临时文件保存，然后移动到输出文件路径
+    # Use temporary file to save, then move to output file path
     temp_fd, temp_path = tempfile.mkstemp(suffix='.tmp')
     try:
         with os.fdopen(temp_fd, 'wb') as temp_f:
-            # 压缩数据
+            # Compress data
             compressed_data = zlib.compress(pickle.dumps(processed_model), level=compression_level)
             temp_f.write(compressed_data)
 
-            # 移动文件
+        # Move file
         shutil.move(temp_path, output_file)
     except Exception as e:
         if os.path.exists(temp_path):
             os.unlink(temp_path)
         raise e
 
-        # 计算文件大小
+    # Calculate file size
     file_size_mb = os.path.getsize(output_file) / (1024 * 1024)
     print(f"Processed model saved for hash tree. File size: {file_size_mb:.2f} MB")
 
@@ -183,7 +183,7 @@ def process_model_for_hash_tree(model_path, output_dir, compression_level=9):
 
 def cleanup_temp_files():
     """
-    清理所有临时文件
+    Clean up all temporary files
     """
     temp_dir = tempfile.gettempdir()
     for filename in os.listdir(temp_dir):
@@ -198,7 +198,7 @@ def cleanup_temp_files():
 
 def verify_hash_node_files(output_dir):
     """
-    验证生成的哈希节点文件是否具有唯一性
+    Verify that generated hash node files have uniqueness
     """
     print("\n=== Verifying Hash Node Files ===")
     file_paths = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.endswith('_hash_node.zpkl')]
@@ -214,25 +214,25 @@ def verify_hash_node_files(output_dir):
                 compressed_data = f.read()
                 model_data = pickle.loads(zlib.decompress(compressed_data))
 
-                # 检查模型ID唯一性
+            # Check model ID uniqueness
             model_id = model_data.get('__model_id__', 'unknown')
             if model_id in model_ids:
                 print(f"WARNING: Model ID collision between {model_name} and {model_ids[model_id]}")
             else:
                 model_ids[model_id] = model_name
 
-                # 检查参数唯一性
+            # Check parameter uniqueness
             for param_name, param_data in model_data.items():
-                if param_name.startswith('__'):  # 跳过元数据
+                if param_name.startswith('__'):  # Skip metadata
                     continue
 
-                    # 提取参数特征
+                # Extract parameter features
                 try:
                     feature_length = int.from_bytes(param_data[:4], byteorder='big')
                     feature_bytes = param_data[4:4 + feature_length]
                     param_features = pickle.loads(feature_bytes)
 
-                    # 创建参数特征哈希
+                    # Create parameter feature hash
                     param_hash = hashlib.md5(feature_bytes).hexdigest()
                     param_key = f"{param_name}:{param_hash[:8]}"
 
@@ -263,7 +263,7 @@ def main():
         "cnn5_model_params.npy"
     ]
 
-    # 建立输出文件路径
+    # Create output file paths
     output_dir = "./model_hash_nodes"
     os.makedirs(output_dir, exist_ok=True)
 
@@ -302,7 +302,7 @@ def main():
         cleanup_temp_files()
         gc.collect()
 
-        # 打印结果摘要
+    # Print results summary
     print("\n=== Processing Summary ===")
     for model, result in results.items():
         status = result['status']
@@ -315,7 +315,7 @@ def main():
         else:
             print(f"{model}: Not found")
 
-            # 验证生成的哈希节点文件
+    # Verify generated hash node files
     verify_hash_node_files(output_dir)
 
     print("\nAll models have been processed!")
@@ -323,22 +323,22 @@ def main():
 
 def extract_data_from_hash_node(file_path, param_name=None, include_identifier=True):
     """
-    从哈希节点文件中提取参数的加密数据
+    Extract parameter encrypted data from hash node file
 
-    参数:
-        file_path: 哈希节点文件路径
-        param_name: 指定的参数名，如果为None则返回所有参数的加密数据
-        include_identifier: 是否在加密数据中包含唯一标识符（默认True）
+    Parameters:
+        file_path: Hash node file path
+        param_name: Specified parameter name, if None returns encrypted data for all parameters
+        include_identifier: Whether to include unique identifier in encrypted data (default True)
 
-    返回:
-        如果param_name指定: 返回单个参数的特征和加密数据
-        如果param_name为None: 返回所有参数的加密数据字典，每个加密数据包含唯一标识
+    Returns:
+        If param_name specified: Returns features and encrypted data for single parameter
+        If param_name is None: Returns encrypted data dictionary for all parameters, each encrypted data contains unique identifier
     """
     with open(file_path, 'rb') as f:
         compressed_data = f.read()
         model_data = pickle.loads(zlib.decompress(compressed_data))
 
-    # 如果指定了参数名，只返回该参数的数据
+    # If parameter name is specified, only return data for that parameter
     if param_name is not None:
         if param_name not in model_data:
             print(f"Parameter {param_name} not found in {file_path}")
@@ -346,17 +346,17 @@ def extract_data_from_hash_node(file_path, param_name=None, include_identifier=T
 
         param_data = model_data[param_name]
 
-        # 提取特征和加密数据
+        # Extract features and encrypted data
         feature_length = int.from_bytes(param_data[:4], byteorder='big')
         feature_bytes = param_data[4:4 + feature_length]
         encrypted_bytes = param_data[4 + feature_length:]
 
         features = pickle.loads(feature_bytes)
 
-        # 如果需要包含标识符（用于chameleon hash），将部分特征哈希添加到加密数据
+        # If need to include identifier (for chameleon hash), add partial feature hash to encrypted data
         if include_identifier:
-            # 创建唯一标识
-            param_id = hashlib.sha256(feature_bytes).digest()[:16]  # 使用16字节标识
+            # Create unique identifier
+            param_id = hashlib.sha256(feature_bytes).digest()[:16]  # Use 16 bytes identifier
             encrypted_bytes = param_id + encrypted_bytes
 
         return {
@@ -364,35 +364,35 @@ def extract_data_from_hash_node(file_path, param_name=None, include_identifier=T
             'encrypted_bytes': encrypted_bytes
         }
 
-        # 如果没有指定参数名，返回所有参数的加密数据
+    # If no parameter name specified, return encrypted data for all parameters
     else:
         result = {}
-        # 获取模型ID作为额外标识
+        # Get model ID as additional identifier
         model_id = model_data.get('__model_id__', b'').encode()[:8]
 
         for key, param_data in model_data.items():
-            # 跳过元数据字段
+            # Skip metadata fields
             if key.startswith('__'):
                 continue
 
             try:
-                # 提取加密数据和特征
+                # Extract encrypted data and features
                 feature_length = int.from_bytes(param_data[:4], byteorder='big')
                 feature_bytes = param_data[4:4 + feature_length]
                 encrypted_bytes = param_data[4 + feature_length:]
 
-                # 如果需要包含唯一标识，将参数特征哈希添加到加密数据
+                # If need to include unique identifier, add parameter feature hash to encrypted data
                 if include_identifier:
-                    # 为参数创建唯一标识（使用参数名和特征的哈希）
+                    # Create unique identifier for parameter (using hash of parameter name and features)
                     key_bytes = key.encode()
                     param_hash = hashlib.sha256(key_bytes + feature_bytes).digest()[:16]
 
-                    # # 组合模型ID、参数ID和加密数据
+                    # # Combine model ID, parameter ID and encrypted data
                     # unique_bytes = model_id + param_hash + encrypted_bytes
                     unique_bytes = param_hash
                     result[key] = unique_bytes
                 else:
-                    # 仅返回加密数据
+                    # Only return encrypted data
                     result[key] = encrypted_bytes
 
             except Exception as e:
@@ -409,5 +409,3 @@ if __name__ == "__main__":
 
     all_encrypted_data = extract_data_from_hash_node("./model_hash_nodes/lenet1_model_params_hash_node.zpkl")
     print(all_encrypted_data)
-
-
